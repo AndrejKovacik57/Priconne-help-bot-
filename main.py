@@ -53,6 +53,7 @@ cur.execute("""
             overflow INTEGER,
             ovf_time TEXT,
             hits INTEGER,
+            reset INTEGER,
             player_id INTEGER,
             cb_id INTEGER,
             FOREIGN KEY (player_id) REFERENCES PLayer(id),
@@ -73,6 +74,7 @@ cur.execute("""
         CREATE TABLE Boss (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT,
+            boss_number INTEGER,
             ranking INTEGER,
             active INTEGER,
             cb_id INTEGER,
