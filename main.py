@@ -1,7 +1,7 @@
 import sqlite3
 
 conn = sqlite3.connect('priconne_database.db')
-
+#
 cur = conn.cursor()
 cur.execute("""DROP TABLE IF EXISTS Clan""")
 cur.execute("""DROP TABLE IF EXISTS Player""")
