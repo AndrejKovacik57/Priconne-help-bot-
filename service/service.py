@@ -1,3 +1,5 @@
 
 class Service:
-    pass
+
+   def test(self):
+       pass
