@@ -113,7 +113,7 @@ class Service:
         conn.commit()
         cur.execute("SELECT * FROM Clan WHERE id=:id", {'id': clan.clan_id})
         updated_result = cur.fetchone()
-
+        conn.close()
         return Clan(updated_result[0], updated_result[1])
 
     def delete_clan(self):
