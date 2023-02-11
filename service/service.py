@@ -1,6 +1,6 @@
 import sqlite3
-from exceptions.exceptions import ParameterIsNullError, ClanExistsError, TableEntryDoesntExistsError
-from db_model.table_classes import Clan
+from exceptions.exceptions import ParameterIsNullError, ObjectExistsInDBError, TableEntryDoesntExistsError
+from db_model.table_classes import Clan, Player
 
 
 class Service:
@@ -19,7 +19,7 @@ class Service:
         result = cur.fetchone()
 
         if result:
-            raise ClanExistsError(result)
+            raise ObjectExistsInDBError(result)
 
         cur.execute(""" INSERT INTO Clan(name) VALUES (:name) """, {'name': clan_name})
         clan = Clan(cur.lastrowid, clan_name)
@@ -107,7 +107,7 @@ class Service:
 
             if result:
                 conn.close()
-                raise ClanExistsError(result)
+                raise ObjectExistsInDBError(result)
 
         cur.execute(""" UPDATE Clan SET name=:name WHERE id=:id """, {'name': clan.name, 'id': clan.clan_id})
         conn.commit()
@@ -119,3 +119,29 @@ class Service:
     def delete_clan(self):
         # TODO: if implemented i need to create delete function of others tables and delete those before Clan table
         pass
+
+    def create_player(self, player_name: str, dis_id: int, clan_id=0) -> Player:
+        """ Insert a new Player into the ClanPlayer table. """
+        if not player_name and not dis_id:
+            raise ParameterIsNullError("Clan name and discord_id cant be empty")
+
+        conn = sqlite3.connect(self.db)
+        cur = conn.cursor()
+
+        cur.execute(""" SELECT id, name, discord_id  FROM ClanPlayer WHERE name=:name """, {'name': player_name})
+        result = cur.fetchone()
+
+        if result:
+            raise ObjectExistsInDBError(result)
+
+        cur.execute(""" INSERT INTO Player(name,discord_id) VALUES (:name,:discord_id) """, {'name': player_name, 'discord_id': dis_id})
+        player_id = cur.lastrowid
+        if clan_id:
+            cur.execute(""" INSERT INTO ClanPlayer(clan_id,player_id) VALUES (player_id,clan_id) """)
+
+        player = Player(player_id, player_name, dis_id)
+
+        conn.commit()
+        conn.close()
+
+        return player
