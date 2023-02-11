@@ -1,6 +1,6 @@
 import sqlite3
 from exceptions.exceptions import ParameterIsNullError, ObjectExistsInDBError, TableEntryDoesntExistsError
-from db_model.table_classes import Clan, Player
+from db_model.table_classes import Clan, Player, ClanBattle
 
 
 class Service:
@@ -227,7 +227,7 @@ class Service:
             conn.close()
             raise TableEntryDoesntExistsError(f'player id {player.player_id}')
 
-        if not player.name or player.discord_id:
+        if not player.name or not player.discord_id:
             conn.close()
             raise ParameterIsNullError("Player name and discord_id cant be empty")
 
@@ -248,3 +248,107 @@ class Service:
         updated_result = cur.fetchone()
         conn.close()
         return Player(updated_result[0], updated_result[1], updated_result[2])
+
+    def create_clan_battle(self, clan_id: int, cb_name: str) -> ClanBattle:
+        """ Insert a new cb into the CB table. """
+        if not cb_name or clan_id:
+            raise ParameterIsNullError("Cb name and clan id cant be empty")
+
+        conn = sqlite3.connect(self.db)
+        cur = conn.cursor()
+
+        cur.execute(""" SELECT * FROM ClanBattle WHERE name=:name """, {'name': cb_name})
+        result = cur.fetchone()
+
+        if result:
+            raise ObjectExistsInDBError(result)
+
+        cur.execute(""" INSERT INTO ClanBattle(name) VALUES (:name,:lap,:tier,:clan_id) """
+                    , {'name': cb_name, 'lap': 1, 'tier': 1, 'clan_id': clan_id})
+
+        cb = ClanBattle(cur.lastrowid, cb_name, clan_id)
+
+        conn.commit()
+        conn.close()
+
+        return cb
+
+    def get_clan_battle_by_id(self, cb_id: int) -> ClanBattle or None:
+        """ Gets cb by Id """
+        if not cb_id:
+            raise ParameterIsNullError("Cb id cant be empty")
+
+        conn = sqlite3.connect(self.db)
+        cur = conn.cursor()
+
+        cur.execute(""" SELECT * FROM ClanBattle WHERE id=:id """, {'id': cb_id})
+        result = cur.fetchone()
+
+        if not result:
+            conn.close()
+            return None
+
+        conn.close()
+        return ClanBattle(result[0], result[1], result[2], result[3])
+
+    def get_clan_battle_by_name_and_clan_id(self, name: str, clan_id: int) -> ClanBattle or None:
+        """ Gets cb by name and clan id """
+        if not clan_id or not name:
+            raise ParameterIsNullError("Cb name and clan id cant be empty")
+
+        conn = sqlite3.connect(self.db)
+        cur = conn.cursor()
+
+        cur.execute(""" 
+                    SELECT * FROM ClanBattle WHERE clan_id=:clan_id AND name=:name"""
+                    , {'clan_id': clan_id, 'name': name})
+        result = cur.fetchone()
+
+        if not result:
+            conn.close()
+            return None
+
+        conn.close()
+        return ClanBattle(result[0], result[1], result[2], result[3])
+
+    def get_clan_battles_in_clan(self, clan_id: int) -> list:
+        """ Gets all cbs from clan"""
+        conn = sqlite3.connect(self.db)
+        cur = conn.cursor()
+        cur.execute(f"""SELECT * FROM ClanBattle WHERE clan_id = {clan_id}""")
+        results = cur.fetchall()
+
+        conn.close()
+        return [ClanBattle(result[0], result[1], result[2], result[3]) for result in results]
+
+    def update_clan_batte(self, clan_battle: ClanBattle) -> ClanBattle:
+        """ Update entry in clanbattle] table """
+        conn = sqlite3.connect(self.db)
+        cur = conn.cursor()
+
+        clan_battle_to_be_updated = self.get_clan_battle_by_id(clan_battle.clan_id)
+        if not clan_battle_to_be_updated:
+            conn.close()
+            raise TableEntryDoesntExistsError(f'cb id {clan_battle_to_be_updated.clan_id}')
+
+        if not clan_battle.name or not clan_battle.lap or not clan_battle.tier:
+            conn.close()
+            raise ParameterIsNullError("ClanBattle name, lap, tier cant be empty")
+
+        if clan_battle_to_be_updated.name != clan_battle.name:
+            cur.execute("""
+                           SELECT * FROM ClanBattle WHERE name=:name AND clan_id=:clan_id"""
+                        , {'name': clan_battle.name, "clan_id": clan_battle.clan_id})
+            result = cur.fetchone()
+
+            if result:
+                conn.close()
+                raise ObjectExistsInDBError(result)
+
+        cur.execute(""" UPDATE ClanBattle SET name=:name AND lap=:lap AND tier=:tier  WHERE id=:id """
+                    , {'name': clan_battle.name, 'lap': clan_battle.lap, "tier": clan_battle.tier})
+        conn.commit()
+        cur.execute("SELECT * FROM ClanBattle WHERE id=:id", {'id': clan_battle.cb_id})
+        updated_result = cur.fetchone()
+        conn.close()
+        return ClanBattle(updated_result[0], updated_result[1], updated_result[2])
