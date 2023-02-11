@@ -128,13 +128,21 @@ class Service:
         conn = sqlite3.connect(self.db)
         cur = conn.cursor()
 
-        cur.execute(""" SELECT id, name, discord_id  FROM ClanPlayer WHERE name=:name """, {'name': player_name})
+        cur.execute(""" 
+                    SELECT id, name, discord_id  
+                    FROM ClanPlayer 
+                    WHERE name=:name and discord_id=:discord_id """
+                    , {'name': player_name, 'discord_id': dis_id}
+                    )
         result = cur.fetchone()
 
         if result:
             raise ObjectExistsInDBError(result)
 
-        cur.execute(""" INSERT INTO Player(name,discord_id) VALUES (:name,:discord_id) """, {'name': player_name, 'discord_id': dis_id})
+        cur.execute(""" 
+                    INSERT INTO Player(name,discord_id) VALUES (:name,:discord_id) """
+                    , {'name': player_name, 'discord_id': dis_id}
+                    )
         player_id = cur.lastrowid
         if clan_id:
             cur.execute(""" INSERT INTO ClanPlayer(clan_id,player_id) VALUES (player_id,clan_id) """)
@@ -145,3 +153,98 @@ class Service:
         conn.close()
 
         return player
+
+    def get_player_by_id(self, player_id: int) -> Player or None:
+        """ Gets Player by Id """
+        if not player_id:
+            raise ParameterIsNullError("Player id cant be empty")
+
+        conn = sqlite3.connect(self.db)
+        cur = conn.cursor()
+
+        cur.execute(""" SELECT * FROM Clan WHERE id=:id """, {'id': player_id})
+        result = cur.fetchone()
+
+        if not result:
+            conn.close()
+            return None
+
+        conn.close()
+        return Player(result[0], result[1], result[2])
+
+    def get_player_by_discord_name_and_id(self, discord_name: str, discord_id: int) -> Clan or None:
+        """ Gets Player by discord name and id """
+        if not discord_name or not discord_id:
+            raise ParameterIsNullError("Discord name and id cant be empty")
+
+        conn = sqlite3.connect(self.db)
+        cur = conn.cursor()
+
+        cur.execute(""" 
+                    SELECT * FROM Player WHERE name=:name AND discord_id=:discord_id """,
+                    {'name': discord_name, 'discord_id': discord_id}
+                    )
+        result = cur.fetchone()
+
+        if not result:
+            conn.close()
+            return None
+
+        conn.close()
+        return Player(result[0], result[1], result[2])
+
+    def get_players(self) -> list:
+        """ Gets all players """
+        conn = sqlite3.connect(self.db)
+        cur = conn.cursor()
+        cur.execute(""" SELECT * FROM Player """)
+        results = cur.fetchall()
+
+        conn.close()
+        return [Player(result[0], result[1], result[2]) for result in results]
+
+    def get_players_from_clan(self, clan_id: int) -> list:
+        """ Gets all players from clan"""
+        conn = sqlite3.connect(self.db)
+        cur = conn.cursor()
+        cur.execute(f"""
+                        SELECT p.*
+                        FROM ClanPlayer cp
+                        JOIN Player p ON cp.player_id = p.id
+                        WHERE cp.clan_id = {clan_id};""")
+        results = cur.fetchall()
+
+        conn.close()
+        return [Player(result[0], result[1], result[2]) for result in results]
+
+    def update_player(self, player: Player) -> Player:
+        """ Update entry in player table """
+        conn = sqlite3.connect(self.db)
+        cur = conn.cursor()
+
+        player_to_be_updated = self.get_player_by_id(player.player_id)
+        if not player_to_be_updated:
+            conn.close()
+            raise TableEntryDoesntExistsError(f'player id {player.player_id}')
+
+        if not player.name or player.discord_id:
+            conn.close()
+            raise ParameterIsNullError("Player name and discord_id cant be empty")
+
+        if player_to_be_updated.name != player.name and player_to_be_updated.discord_id != player.discord_id:
+            cur.execute("""
+                        SELECT id, name FROM Player WHERE name=:name AND discord_id=:discord_id"""
+                        , {'name': player.name, "discord_id": player.discord_id})
+            result = cur.fetchone()
+
+            if result:
+                conn.close()
+                raise ObjectExistsInDBError(result)
+
+        cur.execute(""" UPDATE Clan SET name=:name AND discord_id=:discord_id WHERE id=:id """
+                    , {'id': player.player_id, 'name': player.name, "discord_id": player.discord_id})
+        conn.commit()
+        cur.execute("SELECT * FROM Player WHERE id=:id", {'id': player.player_id})
+        updated_result = cur.fetchone()
+        conn.close()
+        return Player(updated_result[0], updated_result[1], updated_result[2])
