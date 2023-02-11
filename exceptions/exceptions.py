@@ -1,5 +1,5 @@
 
-class ClanExistsError(ValueError):
+class ObjectExistsInDBError(ValueError):
     pass
 
 
