@@ -3,15 +3,15 @@ import sqlite3
 conn = sqlite3.connect('priconne_database.db')
 cur = conn.cursor()
 
-# cur.execute("""DROP TABLE IF EXISTS Clan""")
-# cur.execute("""DROP TABLE IF EXISTS Player""")
-# cur.execute("""DROP TABLE IF EXISTS ClanPlayer""")
-# cur.execute("""DROP TABLE IF EXISTS ClanBattle""")
-# cur.execute("""DROP TABLE IF EXISTS PlayerCBDayInfo""")
-# cur.execute("""DROP TABLE IF EXISTS TeamComposition""")
-# cur.execute("""DROP TABLE IF EXISTS CBDay""")
-# cur.execute("""DROP TABLE IF EXISTS Boss""")
-# cur.execute("""DROP TABLE IF EXISTS BossBooking""")
+cur.execute("""DROP TABLE IF EXISTS Clan""")
+cur.execute("""DROP TABLE IF EXISTS Player""")
+cur.execute("""DROP TABLE IF EXISTS ClanPlayer""")
+cur.execute("""DROP TABLE IF EXISTS ClanBattle""")
+cur.execute("""DROP TABLE IF EXISTS PlayerCBDayInfo""")
+cur.execute("""DROP TABLE IF EXISTS TeamComposition""")
+cur.execute("""DROP TABLE IF EXISTS CBDay""")
+cur.execute("""DROP TABLE IF EXISTS Boss""")
+cur.execute("""DROP TABLE IF EXISTS BossBooking""")
 
 cur.execute("""
         CREATE TABLE Clan (
