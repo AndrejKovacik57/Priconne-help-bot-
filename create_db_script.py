@@ -54,8 +54,9 @@ cur.execute("""
             ovf_time TEXT ,
             hits INTEGER NOT NULL,
             reset INTEGER NOT NULL,
-            player_id INTEGER,
-            cb_id INTEGER,
+            cb_day INTEGER NOT NULL,
+            player_id INTEGER NOT NULL,
+            cb_id INTEGER NOT NULL,
             FOREIGN KEY (player_id) REFERENCES PLayer(id),
             FOREIGN KEY (cb_id) REFERENCES ClanBattle(id)
         )

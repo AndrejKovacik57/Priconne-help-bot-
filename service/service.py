@@ -1,6 +1,6 @@
 import sqlite3
-from exceptions.exceptions import ParameterIsNullError, ObjectExistsInDBError, TableEntryDoesntExistsError
-from db_model.table_classes import Clan, Player, ClanBattle
+from exceptions.exceptions import ParameterIsNullError, ObjectExistsInDBError, TableEntryDoesntExistsError, PlayerCBDayInfoLimitOfEntriesForPlayerAndCBReached
+from db_model.table_classes import Clan, Player, ClanBattle, PlayerCBDayInfo
 
 
 class Service:
@@ -129,8 +129,8 @@ class Service:
         cur = conn.cursor()
 
         cur.execute(""" 
-                    SELECT id, name, discord_id  
-                    FROM ClanPlayer 
+                    SELECT id, name, discord_id
+                    FROM Player 
                     WHERE name=:name and discord_id=:discord_id """
                     , {'name': player_name, 'discord_id': dis_id}
                     )
@@ -145,7 +145,7 @@ class Service:
                     )
         player_id = cur.lastrowid
         if clan_id:
-            cur.execute(""" INSERT INTO ClanPlayer(clan_id,player_id) VALUES (player_id,clan_id) """)
+            cur.execute(f""" INSERT INTO ClanPlayer(clan_id,player_id) VALUES ({clan_id}, {player_id}) """)
 
         player = Player(player_id, player_name, dis_id)
 
@@ -289,7 +289,7 @@ class Service:
             return None
 
         conn.close()
-        return ClanBattle(result[0], result[1], result[2], result[3])
+        return ClanBattle(result[0], result[1], result[2])
 
     def get_clan_battle_by_name_and_clan_id(self, name: str, clan_id: int) -> ClanBattle or None:
         """ Gets cb by name and clan id """
@@ -309,7 +309,7 @@ class Service:
             return None
 
         conn.close()
-        return ClanBattle(result[0], result[1], result[2], result[3])
+        return ClanBattle(result[0], result[1], result[2])
 
     def get_clan_battles_in_clan(self, clan_id: int) -> list:
         """ Gets all cbs from clan"""
@@ -319,10 +319,10 @@ class Service:
         results = cur.fetchall()
 
         conn.close()
-        return [ClanBattle(result[0], result[1], result[2], result[3]) for result in results]
+        return [ClanBattle(result[0], result[1], result[2]) for result in results]
 
     def update_clan_batte(self, clan_battle: ClanBattle) -> ClanBattle:
-        """ Update entry in clanbattle] table """
+        """ Update entry in clanbattle table """
         conn = sqlite3.connect(self.db)
         cur = conn.cursor()
 
@@ -352,3 +352,54 @@ class Service:
         updated_result = cur.fetchone()
         conn.close()
         return ClanBattle(updated_result[0], updated_result[1], updated_result[2])
+
+    def create_player_cb_day_info(self, cb_id, player_id) -> PlayerCBDayInfo:
+        """ Insert a new day info in to table. """
+        if not cb_id or player_id:
+            raise ParameterIsNullError("Cb id and player id cant be empty")
+
+        conn = sqlite3.connect(self.db)
+        cur = conn.cursor()
+
+        cur.execute(f""" SELECT * FROM PlayerCBDayInfo WHERE player_id={player_id} AND cb_id={cb_id}""")
+        result = cur.fetchall()
+        cb_day = len(result)
+
+        if cb_day >= 5:
+            conn.close()
+            raise PlayerCBDayInfoLimitOfEntriesForPlayerAndCBReached(result)
+
+        cb_day += 1
+
+        cur.execute(""" 
+                    INSERT INTO PlayerCBDayInfo(name) 
+                    VALUES (:overflow,:ovf_time,:hits,:reset,:cb_day,:player_id,:cb_id) """
+                    , {'overflow': 0, 'ovf_time': '', 'hits': 3, 'cb_day': cb_day, 'player_id': player_id, 'cb_id': cb_id})
+
+        pcbdi = PlayerCBDayInfo(cur.lastrowid, cb_day, cb_id, player_id)
+
+        conn.commit()
+        conn.close()
+
+        return pcbdi
+
+    def get_player_cb_day_info_by_id(self, cb_id: int, player_id: int, day: int) -> PlayerCBDayInfo or None:
+        """ Gets Clan by Id """
+        if not cb_id or not player_id or not day:
+            raise ParameterIsNullError("Cb and player id, day cant be empty")
+
+        conn = sqlite3.connect(self.db)
+        cur = conn.cursor()
+
+        cur.execute(""" SELECT * FROM PlayerCBDayInfo WHERE player_id=:player_id AND cb_id=:cb_id AND cb_day=:cb_day"""
+                    , {'player_id': player_id, 'cb_id': cb_id, 'cb_day': day})
+        result = cur.fetchone()
+
+        if not result:
+            conn.close()
+            return None
+        print(result)
+        conn.close()
+        return None
+
+

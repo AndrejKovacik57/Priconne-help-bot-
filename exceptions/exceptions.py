@@ -9,3 +9,7 @@ class ParameterIsNullError(ValueError):
 
 class TableEntryDoesntExistsError(ValueError):
     pass
+
+
+class PlayerCBDayInfoLimitOfEntriesForPlayerAndCBReached(ValueError):
+    pass
