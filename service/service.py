@@ -162,7 +162,7 @@ class Service:
         conn = sqlite3.connect(self.db)
         cur = conn.cursor()
 
-        cur.execute(""" SELECT * FROM Clan WHERE id=:id """, {'id': player_id})
+        cur.execute(""" SELECT * FROM PLayer WHERE id=:id """, {'id': player_id})
         result = cur.fetchone()
 
         if not result:
@@ -241,7 +241,7 @@ class Service:
                 conn.close()
                 raise ObjectExistsInDBError(result)
 
-        cur.execute(""" UPDATE Clan SET name=:name AND discord_id=:discord_id WHERE id=:id """
+        cur.execute(""" UPDATE Player SET name=:name AND discord_id=:discord_id WHERE id=:id """
                     , {'id': player.player_id, 'name': player.name, "discord_id": player.discord_id})
         conn.commit()
         cur.execute("SELECT * FROM Player WHERE id=:id", {'id': player.player_id})
@@ -263,7 +263,7 @@ class Service:
         if result:
             raise ObjectExistsInDBError(result)
 
-        cur.execute(""" INSERT INTO ClanBattle(name) VALUES (:name,:lap,:tier,:clan_id) """
+        cur.execute(""" INSERT INTO ClanBattle(name, lap, tier, clan_id) VALUES (:name,:lap,:tier,:clan_id) """
                     , {'name': cb_name, 'lap': 1, 'tier': 1, 'clan_id': clan_id})
 
         cb = ClanBattle(cur.lastrowid, cb_name, clan_id)
@@ -372,7 +372,7 @@ class Service:
         cb_day += 1
 
         cur.execute(""" 
-                    INSERT INTO PlayerCBDayInfo(name) 
+                    INSERT INTO PlayerCBDayInfo(overflow, ovf_time, hits, reset, cb_day, player_id, cb_id) 
                     VALUES (:overflow,:ovf_time,:hits,:reset,:cb_day,:player_id,:cb_id) """
                     , {'overflow': 0, 'ovf_time': '', 'hits': 3, 'cb_day': cb_day, 'player_id': player_id, 'cb_id': cb_id})
 
