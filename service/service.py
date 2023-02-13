@@ -1,7 +1,7 @@
 import sqlite3
 from exceptions.exceptions import ParameterIsNullError, ObjectExistsInDBError, TableEntryDoesntExistsError, \
     PlayerCBDayInfoLimitOfEntriesForPlayerAndCBReached
-from db_model.table_classes import Clan, Player, ClanBattle, PlayerCBDayInfo
+from db_model.table_classes import Clan, Player, ClanBattle, PlayerCBDayInfo, TeamComposition
 
 
 class Service:
@@ -466,3 +466,74 @@ class Service:
         return PlayerCBDayInfo(updated_result[0], updated_result[5], updated_result[6], updated_result[7],
                                overflow=updated_result[1], ovf_time=updated_result[2], hits=updated_result[3],
                                reset=updated_result[4])
+
+    def create_team_composition(self, name: str, pcdi_id: int) -> TeamComposition:
+        """ Insert a new team the Team Composition table. """
+        if not (name and pcdi_id):
+            raise ParameterIsNullError("Team name and pcdi_id cant be empty")
+
+        conn = sqlite3.connect(self.db)
+        cur = conn.cursor()
+
+        cur.execute(""" INSERT INTO TeamComposition(name, used, pcdi_id) VALUES (:name, FALSE, :pcdi_id) """,
+                    {'name': name, 'pcdi_id': pcdi_id})
+        tc = TeamComposition(cur.lastrowid, name, False, pcdi_id)
+
+        conn.commit()
+        conn.close()
+
+        return tc
+
+    def get_team_composition_by_id(self, tc_id: int) -> TeamComposition or None:
+        """ Team composition by Id """
+        if not tc_id:
+            raise ParameterIsNullError("TC id cant be empty")
+
+        conn = sqlite3.connect(self.db)
+        cur = conn.cursor()
+
+        cur.execute(""" SELECT * FROM TeamComposition WHERE id=:id """, {'id': tc_id})
+        result = cur.fetchone()
+
+        if not result:
+            conn.close()
+            return None
+
+        conn.close()
+        return TeamComposition(result[0], result[1], result[2], result[3])
+
+    def get_team_compositions_by_pcdi(self, pcdi_id: int) -> list:
+        """ Team composition by Id """
+        if not pcdi_id:
+            raise ParameterIsNullError("PCDI id cant be empty")
+
+        conn = sqlite3.connect(self.db)
+        cur = conn.cursor()
+
+        cur.execute(""" SELECT * FROM TeamComposition WHERE pcdi_id=:pcdi_id """, {'pcdi_id': pcdi_id})
+        results = cur.fetchall()
+
+        conn.close()
+        return [TeamComposition(result[0], result[1], result[2], result[3]) for result in results]
+
+    def update_team_composition(self, tc: TeamComposition) -> TeamComposition:
+        """ Update team compositon """
+        conn = sqlite3.connect(self.db)
+        cur = conn.cursor()
+
+        tc_to_be_updated = self.get_team_composition_by_id(tc.tc_id)
+        if not tc_to_be_updated:
+            conn.close()
+            raise TableEntryDoesntExistsError(f'Team composition id {tc.tc_id}')
+
+        if not (tc.name and tc.used):
+            conn.close()
+            raise ParameterIsNullError("Team composition  name, used cant be empty")
+
+        cur.execute(""" UPDATE TeamComposition SET name=:name AND used=:used WHERE id=:id """,
+                    {'name': tc.name, 'used': tc.used, 'id': tc.tc_id})
+        conn.commit()
+        cur.execute("SELECT * FROM TeamComposition WHERE id=:id", {'id': tc.tc_id})
+        updated_result = cur.fetchone()
+        conn.close()
+        return TeamComposition(updated_result[0], updated_result[1], updated_result[2], updated_result[3])

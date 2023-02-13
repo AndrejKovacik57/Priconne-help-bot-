@@ -59,3 +59,18 @@ class PlayerCBDayInfo:
                 f"ovf_time: {self.ovf_time}\n"
                 f"hits: {self.hits}\n"
                 f"reset: {self.reset}\n")
+
+
+class TeamComposition:
+    def __init__(self, tc_id, name, used, pcdi_id):
+        self.tc_id = tc_id
+        self.name = name
+        self.used = used
+        self.pcdi_id = pcdi_id
+
+    def __str__(self):
+        return(f'tc_id: {self.tc_id}\n'
+               f'name: {self.name}\n'
+               f'used: {self.used}\n'
+               f'pcdi_id: {self.pcdi_id}\n')
+    
