@@ -5,8 +5,8 @@ class Clan:
         self.name = name
 
     def __str__(self):
-        return f'clan id: {self.clan_id} \n' \
-               f'clan name: {self.name}'
+        return (f"clan_id: {self.clan_id}\n"
+                f"name: {self.name}\n")
 
 
 class Player:
@@ -14,6 +14,11 @@ class Player:
         self.player_id = player_id
         self.name = name
         self.discord_id = discord_id
+
+    def __str__(self):
+        return (f"player_id: {self.player_id}\n"
+                f"name: {self.name}\n"
+                f"discord_id: {self.discord_id}\n")
 
 
 class ClanBattle:
@@ -23,6 +28,13 @@ class ClanBattle:
         self.lap = 1
         self.tier = 1
         self.clan_id = clan_id
+
+    def __str__(self):
+        return (f"cb_id: {self.cb_id}\n"
+                f"name: {self.name}\n"
+                f"lap: {self.lap}\n"
+                f"tier: {self.tier}\n"
+                f"clan_id: {self.clan_id}\n")
 
 
 class PlayerCBDayInfo:
@@ -35,3 +47,13 @@ class PlayerCBDayInfo:
         self.cb_day = cb_day
         self.player_id = player_id
         self.cb_id = cb_id
+
+    def __str__(self):
+        return (f"pcbdi_id: {self.pcbdi_id}\n"
+                f"cb_day: {self.cb_day}\n"
+                f"player_id: {self.player_id}\n"
+                f"cb_id: {self.cb_id}\n"
+                f"overflow: {self.overflow}\n"
+                f"ovf_time: {self.ovf_time}\n"
+                f"hits: {self.hits}\n"
+                f"reset: {self.reset}\n")
