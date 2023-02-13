@@ -3,15 +3,15 @@ import sqlite3
 conn = sqlite3.connect('priconne_database.db')
 cur = conn.cursor()
 
-cur.execute("""DROP TABLE IF EXISTS Clan""")
-cur.execute("""DROP TABLE IF EXISTS Player""")
-cur.execute("""DROP TABLE IF EXISTS ClanPlayer""")
-cur.execute("""DROP TABLE IF EXISTS ClanBattle""")
-cur.execute("""DROP TABLE IF EXISTS PlayerCBDayInfo""")
-cur.execute("""DROP TABLE IF EXISTS TeamComposition""")
-cur.execute("""DROP TABLE IF EXISTS CBDay""")
-cur.execute("""DROP TABLE IF EXISTS Boss""")
-cur.execute("""DROP TABLE IF EXISTS BossBooking""")
+# cur.execute("""DROP TABLE IF EXISTS Clan""")
+# cur.execute("""DROP TABLE IF EXISTS Player""")
+# cur.execute("""DROP TABLE IF EXISTS ClanPlayer""")
+# cur.execute("""DROP TABLE IF EXISTS ClanBattle""")
+# cur.execute("""DROP TABLE IF EXISTS PlayerCBDayInfo""")
+# cur.execute("""DROP TABLE IF EXISTS TeamComposition""")
+# cur.execute("""DROP TABLE IF EXISTS CBDay""")
+# cur.execute("""DROP TABLE IF EXISTS Boss""")
+# cur.execute("""DROP TABLE IF EXISTS BossBooking""")
 
 cur.execute("""
         CREATE TABLE Clan (
@@ -24,13 +24,14 @@ cur.execute("""
         CREATE TABLE Player (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
+            clan_role TEXT NULL,
             discord_id INTEGER NOT NULL
         )
     """)
 cur.execute("""
         CREATE TABLE ClanPlayer (
-            clan_id INTEGER,
-            player_id INTEGER,
+            clan_id INTEGER NOT NULL,
+            player_id INTEGER NOT NULL,
             FOREIGN KEY (clan_id) REFERENCES Clan(id), 
             FOREIGN KEY (player_id) REFERENCES Player(id),
             UNIQUE (clan_id, player_id)
@@ -43,15 +44,15 @@ cur.execute("""
             name TEXT UNIQUE NOT NULL,
             lap INTEGER NOT NULL,
             tier INTEGER NOT NULL,
-            clan_id INTEGER,
+            clan_id INTEGER NOT NULL,
             FOREIGN KEY (clan_id) REFERENCES Clan(id)
         )
     """)
 cur.execute("""
         CREATE TABLE PlayerCBDayInfo(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            overflow INTEGER NOT NULL,
-            ovf_time TEXT ,
+            overflow INTEGER NULL,
+            ovf_time TEXT NULL,
             hits INTEGER NOT NULL,
             reset INTEGER NOT NULL,
             cb_day INTEGER NOT NULL,
@@ -66,7 +67,7 @@ cur.execute("""
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
             used INTEGER NOT NULL,
-            pcdi_id INTEGER,
+            pcdi_id INTEGER NOT NULL,
             FOREIGN KEY (pcdi_id) REFERENCES PlayerCBDayInfo(id)
 
         )
