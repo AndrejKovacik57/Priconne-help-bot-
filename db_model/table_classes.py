@@ -10,14 +10,16 @@ class Clan:
 
 
 class Player:
-    def __init__(self, player_id, name, discord_id):
+    def __init__(self, player_id, name, discord_id, clan_role):
         self.player_id = player_id
         self.name = name
+        self.clan_role = clan_role
         self.discord_id = discord_id
 
     def __str__(self):
         return (f"player_id: {self.player_id}\n"
                 f"name: {self.name}\n"
+                f"clan_role: {self.clan_role}\n"
                 f"discord_id: {self.discord_id}\n")
 
 

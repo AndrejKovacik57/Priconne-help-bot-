@@ -1,5 +1,6 @@
 import sqlite3
-from exceptions.exceptions import ParameterIsNullError, ObjectExistsInDBError, TableEntryDoesntExistsError, PlayerCBDayInfoLimitOfEntriesForPlayerAndCBReached
+from exceptions.exceptions import ParameterIsNullError, ObjectExistsInDBError, TableEntryDoesntExistsError, \
+    PlayerCBDayInfoLimitOfEntriesForPlayerAndCBReached
 from db_model.table_classes import Clan, Player, ClanBattle, PlayerCBDayInfo
 
 
@@ -233,8 +234,8 @@ class Service:
 
         if player_to_be_updated.name != player.name and player_to_be_updated.discord_id != player.discord_id:
             cur.execute("""
-                        SELECT * FROM Player WHERE name=:name AND discord_id=:discord_id"""
-                        , {'name': player.name, "discord_id": player.discord_id})
+                        SELECT * FROM Player WHERE name=:name AND discord_id=:discord_id AND clan_role=:clan_role"""
+                        , {'name': player.name, "discord_id": player.discord_id, "clan_role": player.clan_role})
             result = cur.fetchone()
 
             if result:
@@ -383,42 +384,85 @@ class Service:
 
         return pcbdi
 
-    def get_pcdi_by_clan_player_id(self, cb_id: int, player_id: int, day=0) -> list:
-        """ Gets Clan by Id """
-        if not cb_id or not player_id:
-            raise ParameterIsNullError("Cb and player id cant be empty")
+    def get_pcdi_by_id(self, pcdi_id: int) -> PlayerCBDayInfo:
+        """ Gets pcdi by id"""
+        if not pcdi_id:
+            raise ParameterIsNullError("PCDI id cant be empty")
+
+        conn = sqlite3.connect(self.db)
+        cur = conn.cursor()
+
+        cur.execute("""SELECT * FROM PlayerCBDayInfo WHERE id=:id""", {'id': pcdi_id})
+        result = cur.fetchone()
+        conn.close()
+        return PlayerCBDayInfo(result[0], result[5], result[6], result[7], overflow=result[1], ovf_time=result[2],
+                               hits=result[3], reset=result[4])
+
+    def get_all_pcdi_by_clan_player_id(self, player_id: int, day=0) -> list:
+        """ Gets pcdi by player id and day (optional) """
+        if not player_id:
+            raise ParameterIsNullError("Player id cant be empty")
 
         conn = sqlite3.connect(self.db)
         cur = conn.cursor()
         if day:
             cur.execute("""
-                        SELECT * FROM PlayerCBDayInfo WHERE player_id=:player_id AND cb_id=:cb_id AND cb_day=:cb_day""",
-                        {'player_id': player_id, 'cb_id': cb_id, 'cb_day': day})
+                        SELECT * FROM PlayerCBDayInfo WHERE player_id=:player_id AND cb_day=:cb_day""",
+                        {'player_id': player_id, 'cb_day': day})
         else:
             cur.execute(""" 
-                        SELECT * FROM PlayerCBDayInfo WHERE player_id=:player_id AND cb_id=:cb_id""",
-                        {'player_id': player_id, 'cb_id': cb_id, 'cb_day': day})
+                        SELECT * FROM PlayerCBDayInfo WHERE player_id=:player_id""",
+                        {'player_id': player_id, 'cb_day': day})
         results = cur.fetchall()
         conn.close()
         return [PlayerCBDayInfo(
             result[0], result[5], result[6], result[7], overflow=result[1], ovf_time=result[2],
             hits=result[3], reset=result[4]) for result in results]
-    #
-    # def get_all_pcdi_by_clan_day(self, cb_id: int,day: int) -> PlayerCBDayInfo or None:
-    #     """ Gets Clan by Id """
-    #     if not cb_id or not player_id or not day:
-    #         raise ParameterIsNullError("Cb and player id, day cant be empty")
-    #
-    #     conn = sqlite3.connect(self.db)
-    #     cur = conn.cursor()
-    #
-    #     cur.execute(""" SELECT * FROM PlayerCBDayInfo WHERE player_id=:player_id AND cb_id=:cb_id AND cb_day=:cb_day"""
-    #                 , {'player_id': player_id, 'cb_id': cb_id, 'cb_day': day})
-    #     result = cur.fetchone()
-    #
-    #     if not result:
-    #         conn.close()
-    #         return None
-    #     print(result)
-    #     conn.close()
-    #     return None
+
+    def get_all_pcdi_by_cb_id(self, cb_id: int, day: int) -> list:
+        """ Gets pcdi by cb id and day (optional) """
+        if not cb_id:
+            raise ParameterIsNullError("Cb id cant be empty")
+
+        conn = sqlite3.connect(self.db)
+        cur = conn.cursor()
+        if day:
+            cur.execute("""
+                        SELECT * FROM PlayerCBDayInfo WHERE cb_id=:cb_id AND cb_day=:cb_day""",
+                        {'cb_id': cb_id, 'cb_day': day})
+        else:
+            cur.execute(""" 
+                        SELECT * FROM PlayerCBDayInfo WHERE cb_id=:cb_id""",
+                        {'cb_id': cb_id, 'cb_day': day})
+        results = cur.fetchall()
+        conn.close()
+        return [PlayerCBDayInfo(
+            result[0], result[5], result[6], result[7], overflow=result[1], ovf_time=result[2],
+            hits=result[3], reset=result[4]) for result in results]
+
+    def update_pcdi(self, pcdi: PlayerCBDayInfo) -> PlayerCBDayInfo:
+        """ Update pcdi table """
+        conn = sqlite3.connect(self.db)
+        cur = conn.cursor()
+
+        pcdi_to_be_updated = self.get_pcdi_by_id(pcdi.pcbdi_id)
+
+        if not pcdi_to_be_updated:
+            conn.close()
+            raise TableEntryDoesntExistsError(f'pcdi id {pcdi.pcbdi_id}')
+
+        if not (pcdi_to_be_updated.hits and pcdi_to_be_updated.reset and pcdi_to_be_updated.cb_day):
+            conn.close()
+            raise ParameterIsNullError("Pcdi hits, reset and cb_day cant be empty")
+
+        cur.execute(""" UPDATE PlayerCBDayInfo SET overflow=:overflow AND ovf_time=:ovf_time AND hits=:hits 
+                        AND reset=:reset AND cb_day=:cb_day WHERE id=:id """,
+                    {'overflow': pcdi.overflow, 'ovf_time': pcdi.ovf_time, 'hits': pcdi.hits, 'reset': pcdi.reset,
+                     'cb_day': pcdi.cb_day, 'id': pcdi.pcbdi_id})
+        conn.commit()
+        cur.execute("SELECT * FROM PlayerCBDayInfo WHERE id=:id", {'id': pcdi.pcbdi_id})
+        updated_result = cur.fetchone()
+        conn.close()
+        return PlayerCBDayInfo(updated_result[0], updated_result[5], updated_result[6], updated_result[7],
+                               overflow=updated_result[1], ovf_time=updated_result[2], hits=updated_result[3],
+                               reset=updated_result[4])

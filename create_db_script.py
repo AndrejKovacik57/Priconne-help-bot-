@@ -77,9 +77,9 @@ cur.execute("""
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
             boss_number INTEGER NOT NULL,
-            ranking INTEGER,
+            ranking INTEGER NOT NULL,
             active INTEGER NOT NULL,
-            cb_id INTEGER,
+            cb_id INTEGER NOT NULL,
             FOREIGN KEY (cb_id) REFERENCES ClanBattle(id)
         )
     """)
@@ -87,12 +87,12 @@ cur.execute("""
         CREATE TABLE BossBooking (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             lap INTEGER NOT NULL,
-            overflow INTEGER,
-            ovf_time TEXT,
+            overflow INTEGER NULL,
+            ovf_time TEXT NULL,
             comp_name TEXT NOT NULL,
-            exp_damage INTEGER,
-            boss_id INTEGER,
-            player_id INTEGER,
+            exp_damage INTEGER NULL,
+            boss_id INTEGER NOT NULL,
+            player_id INTEGER NOT NULL,
             FOREIGN KEY (boss_id) REFERENCES Boss(id),
             FOREIGN KEY (player_id) REFERENCES Player(id)
         )
