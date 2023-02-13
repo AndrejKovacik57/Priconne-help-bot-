@@ -15,7 +15,7 @@ class Service:
         conn = sqlite3.connect(self.db)
         cur = conn.cursor()
 
-        cur.execute(""" SELECT id, name FROM Clan WHERE name=:name """, {'name': clan_name})
+        cur.execute(""" SELECT * FROM Clan WHERE name=:name """, {'name': clan_name})
         result = cur.fetchone()
 
         if result:
@@ -37,7 +37,7 @@ class Service:
         conn = sqlite3.connect(self.db)
         cur = conn.cursor()
 
-        cur.execute(""" SELECT id, name FROM Clan WHERE id=:id """, {'id': clan_id})
+        cur.execute(""" SELECT * FROM Clan WHERE id=:id """, {'id': clan_id})
         result = cur.fetchone()
 
         if not result:
@@ -55,7 +55,7 @@ class Service:
         conn = sqlite3.connect(self.db)
         cur = conn.cursor()
 
-        cur.execute(""" SELECT id, name FROM Clan WHERE name=:name """, {'name': clan_name})
+        cur.execute(""" SELECT * FROM Clan WHERE name=:name """, {'name': clan_name})
         result = cur.fetchone()
 
         if not result:
@@ -69,7 +69,7 @@ class Service:
         """ Gets all clans """
         conn = sqlite3.connect(self.db)
         cur = conn.cursor()
-        cur.execute(""" SELECT id, name FROM Clan """)
+        cur.execute(""" SELECT * FROM Clan """)
         results = cur.fetchall()
 
         conn.close()
@@ -81,7 +81,7 @@ class Service:
             raise ValueError(f'Parameter limit must be higher then 0')
         conn = sqlite3.connect(self.db)
         cur = conn.cursor()
-        cur.execute(""" SELECT id, name FROM Clan LIMIT :limit OFFSET :offset""", {'limit': limit, 'offset': offset})
+        cur.execute(""" SELECT * FROM Clan LIMIT :limit OFFSET :offset""", {'limit': limit, 'offset': offset})
         results = cur.fetchall()
 
         conn.close()
@@ -102,7 +102,7 @@ class Service:
             raise ParameterIsNullError("Clan name cant be empty")
 
         if clan_to_be_updated.name != clan.name:
-            cur.execute(""" SELECT id, name FROM Clan WHERE name=:name """, {'name': clan.name})
+            cur.execute(""" SELECT * FROM Clan WHERE name=:name """, {'name': clan.name})
             result = cur.fetchone()
 
             if result:
@@ -129,7 +129,7 @@ class Service:
         cur = conn.cursor()
 
         cur.execute(""" 
-                    SELECT id, name, discord_id
+                    SELECT *
                     FROM Player 
                     WHERE name=:name and discord_id=:discord_id """
                     , {'name': player_name, 'discord_id': dis_id}
@@ -233,7 +233,7 @@ class Service:
 
         if player_to_be_updated.name != player.name and player_to_be_updated.discord_id != player.discord_id:
             cur.execute("""
-                        SELECT id, name FROM Player WHERE name=:name AND discord_id=:discord_id"""
+                        SELECT * FROM Player WHERE name=:name AND discord_id=:discord_id"""
                         , {'name': player.name, "discord_id": player.discord_id})
             result = cur.fetchone()
 
@@ -372,9 +372,9 @@ class Service:
         cb_day += 1
 
         cur.execute(""" 
-                    INSERT INTO PlayerCBDayInfo(overflow, ovf_time, hits, reset, cb_day, player_id, cb_id) 
-                    VALUES (:overflow,:ovf_time,:hits,:reset,:cb_day,:player_id,:cb_id) """
-                    , {'overflow': 0, 'ovf_time': '', 'hits': 3, 'cb_day': cb_day, 'player_id': player_id, 'cb_id': cb_id})
+                    INSERT INTO PlayerCBDayInfo(hits, reset, cb_day, player_id, cb_id) 
+                    VALUES (:hits,:reset,:cb_day,:player_id,:cb_id) """
+                    , {'reset': True, 'hits': 3, 'cb_day': cb_day, 'player_id': player_id, 'cb_id': cb_id})
 
         pcbdi = PlayerCBDayInfo(cur.lastrowid, cb_day, cb_id, player_id)
 
@@ -383,23 +383,42 @@ class Service:
 
         return pcbdi
 
-    def get_player_cb_day_info_by_id(self, cb_id: int, player_id: int, day: int) -> PlayerCBDayInfo or None:
+    def get_pcdi_by_clan_player_id(self, cb_id: int, player_id: int, day=0) -> list:
         """ Gets Clan by Id """
-        if not cb_id or not player_id or not day:
-            raise ParameterIsNullError("Cb and player id, day cant be empty")
+        if not cb_id or not player_id:
+            raise ParameterIsNullError("Cb and player id cant be empty")
 
         conn = sqlite3.connect(self.db)
         cur = conn.cursor()
-
-        cur.execute(""" SELECT * FROM PlayerCBDayInfo WHERE player_id=:player_id AND cb_id=:cb_id AND cb_day=:cb_day"""
-                    , {'player_id': player_id, 'cb_id': cb_id, 'cb_day': day})
-        result = cur.fetchone()
-
-        if not result:
-            conn.close()
-            return None
-        print(result)
+        if day:
+            cur.execute("""
+                        SELECT * FROM PlayerCBDayInfo WHERE player_id=:player_id AND cb_id=:cb_id AND cb_day=:cb_day""",
+                        {'player_id': player_id, 'cb_id': cb_id, 'cb_day': day})
+        else:
+            cur.execute(""" 
+                        SELECT * FROM PlayerCBDayInfo WHERE player_id=:player_id AND cb_id=:cb_id""",
+                        {'player_id': player_id, 'cb_id': cb_id, 'cb_day': day})
+        results = cur.fetchall()
         conn.close()
-        return None
-
-
+        return [PlayerCBDayInfo(
+            result[0], result[5], result[6], result[7], overflow=result[1], ovf_time=result[2],
+            hits=result[3], reset=result[4]) for result in results]
+    #
+    # def get_all_pcdi_by_clan_day(self, cb_id: int,day: int) -> PlayerCBDayInfo or None:
+    #     """ Gets Clan by Id """
+    #     if not cb_id or not player_id or not day:
+    #         raise ParameterIsNullError("Cb and player id, day cant be empty")
+    #
+    #     conn = sqlite3.connect(self.db)
+    #     cur = conn.cursor()
+    #
+    #     cur.execute(""" SELECT * FROM PlayerCBDayInfo WHERE player_id=:player_id AND cb_id=:cb_id AND cb_day=:cb_day"""
+    #                 , {'player_id': player_id, 'cb_id': cb_id, 'cb_day': day})
+    #     result = cur.fetchone()
+    #
+    #     if not result:
+    #         conn.close()
+    #         return None
+    #     print(result)
+    #     conn.close()
+    #     return None
