@@ -1,7 +1,7 @@
 import sqlite3
 from exceptions.exceptions import ParameterIsNullError, ObjectExistsInDBError, TableEntryDoesntExistsError, \
     PlayerCBDayInfoLimitOfEntriesForPlayerAndCBReached
-from db_model.table_classes import Clan, Player, ClanBattle, PlayerCBDayInfo, TeamComposition
+from db_model.table_classes import Clan, Player, ClanBattle, PlayerCBDayInfo, TeamComposition, Boss, BossBooking
 
 
 class Service:
@@ -20,6 +20,7 @@ class Service:
         result = cur.fetchone()
 
         if result:
+            conn.close()
             raise ObjectExistsInDBError(result)
 
         cur.execute(""" INSERT INTO Clan(name) VALUES (:name) """, {'name': clan_name})
@@ -537,3 +538,246 @@ class Service:
         updated_result = cur.fetchone()
         conn.close()
         return TeamComposition(updated_result[0], updated_result[1], updated_result[2], updated_result[3])
+
+    def create_boss(self, name: str, boss_number: int, cb_id: int, ranking: int) -> Boss:
+        """ Insert a new boss into the Boss table. """
+        if not (name and boss_number and cb_id):
+            raise ParameterIsNullError("Boss name, cb_id and number cant be empty")
+
+        conn = sqlite3.connect(self.db)
+        cur = conn.cursor()
+
+        cur.execute(""" SELECT * FROM Boss WHERE name=:name and cb_id=:cb_id""", {'name': name, 'cb_id': cb_id})
+        result = cur.fetchone()
+
+        if result:
+            conn.close()
+            raise ObjectExistsInDBError(result)
+
+        cur.execute(""" INSERT INTO Boss(name, boss_number, ranking, active, cb_id) 
+                        VALUES (:name,:boss_number,:ranking,0,:cb_id) """,
+                    {'name': name, 'boss_number': boss_number, 'ranking': ranking, 'cb_id': cb_id})
+        boss = Boss(cur.lastrowid, name, boss_number, ranking, False, cb_id)
+
+        conn.commit()
+        conn.close()
+
+        return boss
+
+    def get_boss_by_id(self, boss_id: int) -> Boss or None:
+        """ Gets Boss by Id """
+        if not boss_id:
+            raise ParameterIsNullError("Boss id cant be empty")
+
+        conn = sqlite3.connect(self.db)
+        cur = conn.cursor()
+
+        cur.execute(""" SELECT * FROM Boss WHERE id=:id """, {'id': boss_id})
+        result = cur.fetchone()
+
+        if not result:
+            conn.close()
+            return None
+
+        conn.close()
+        return Boss(result[0], result[1], result[2], result[3], result[4], result[5])
+
+    def get_boss_name(self, boss_name: str, cb_id) -> Boss or None:
+        """ Gets Boss by name  and cb"""
+        if not (boss_name and cb_id):
+            raise ParameterIsNullError("Boss name and cb id cant be empty")
+
+        conn = sqlite3.connect(self.db)
+        cur = conn.cursor()
+
+        cur.execute(""" SELECT * FROM Boss WHERE name=:name AND cb_id=:cb_id""", {'name': boss_name, 'cb_id': cb_id})
+        result = cur.fetchone()
+
+        if not result:
+            conn.close()
+            return None
+
+        conn.close()
+        return Boss(result[0], result[1], result[2], result[3], result[4], result[5])
+
+    def get_bosses(self, cb_id) -> list:
+        """ Gets all bosses """
+        conn = sqlite3.connect(self.db)
+        cur = conn.cursor()
+        cur.execute(""" SELECT * FROM Boss WHERE cb_id=:cb_id""", {'cb_id': cb_id})
+        results = cur.fetchall()
+
+        conn.close()
+        return [Boss(result[0], result[1], result[2], result[3], result[4], result[5]) for result in results]
+
+    def update_boss(self, boss: Boss) -> Boss:
+        """ Update boss """
+        conn = sqlite3.connect(self.db)
+        cur = conn.cursor()
+
+        boss_to_be_updated = self.get_boss_by_id(boss.boss_id)
+        if not boss_to_be_updated:
+            conn.close()
+            raise TableEntryDoesntExistsError(f'Boss id {boss.boss_id}')
+
+        if not (boss.name and boss.boss_number and boss.ranking and boss.active):
+            conn.close()
+            raise ParameterIsNullError("Boss name, boss_number, ranking, active cant be empty")
+
+        cur.execute(""" 
+                    UPDATE Boss SET name=:name AND boss_number=:boss_number AND ranking=:ranking AND active=:active
+                    WHERE id=:id """,
+                    {'name': boss.name, 'boss_number': boss.boss_number, 'ranking': boss.ranking, 'active': boss.active,
+                     'id': boss.boss_id})
+        conn.commit()
+        cur.execute("SELECT * FROM Boss WHERE id=:id", {'id': boss.boss_id})
+        updated_result = cur.fetchone()
+        conn.close()
+        return Boss(updated_result[0], updated_result[1], updated_result[2], updated_result[3], updated_result[4],
+                    updated_result[5])
+
+    def create_boss_booking(self, lap: int, overflow: bool, ovf_time: str, comp_name: str, exp_damage: int,
+                            boss_id: int, player_id: int) -> BossBooking:
+        """ Insert boss booking into table. """
+        if not (lap and comp_name and exp_damage and boss_id and player_id):
+            raise ParameterIsNullError("Cb lap and comp_name exp_damage boss_id cant player_id be empty")
+
+        conn = sqlite3.connect(self.db)
+        cur = conn.cursor()
+
+        if overflow and not ovf_time:
+            conn.close()
+            raise ParameterIsNullError("Hit is marked as ovf but ovf_time is not set")
+
+        elif overflow and ovf_time:
+            cur.execute(""" INSERT INTO BossBooking(lap, overflow, ovf_time, comp_name, exp_damage, boss_id, player_id) 
+                            VALUES (:lap,:overflow,:ovf_time,:comp_name,:exp_damage,:boss_id,:player_id) """,
+                        {'lap': lap, 'overflow': overflow, 'ovf_time': ovf_time, 'comp_name': comp_name,
+                         'exp_damage': exp_damage, 'boss_id': boss_id, 'player_id': player_id})
+            bb = BossBooking(cur.lastrowid, lap, comp_name, exp_damage, boss_id, player_id, overflow=overflow,
+                             ovf_time=ovf_time)
+        else:
+            cur.execute(""" INSERT INTO BossBooking(lap, comp_name, exp_damage, boss_id, player_id) 
+                            VALUES (:lap,:comp_name,:exp_damage,:boss_id,:player_id) """,
+                        {'lap': lap, 'comp_name': comp_name,'exp_damage': exp_damage, 'boss_id': boss_id,
+                         'player_id': player_id})
+            bb = BossBooking(cur.lastrowid, lap, comp_name, exp_damage, boss_id, player_id)
+
+        conn.commit()
+        conn.close()
+
+        return bb
+
+    def get_boss_booking_by_id(self, bb_id: int) -> BossBooking or None:
+        """ Gets boss booking by Id """
+        if not bb_id:
+            raise ParameterIsNullError("Boss booking id cant be empty")
+
+        conn = sqlite3.connect(self.db)
+        cur = conn.cursor()
+
+        cur.execute(""" SELECT * FROM BossBooking WHERE id=:id """, {'id': bb_id})
+        result = cur.fetchone()
+
+        if not result:
+            conn.close()
+            return None
+
+        conn.close()
+        return BossBooking(result[0], result[1], result[4], result[5], result[6], result[7], overflow=result[2],
+                           ovf_time=result[3])
+
+    def get_boss_bookings_by_player_id(self, player_id: int) -> list:
+        """ Gets boss bookings by player Id """
+        if not player_id:
+            raise ParameterIsNullError("Player id cant be empty")
+
+        conn = sqlite3.connect(self.db)
+        cur = conn.cursor()
+
+        cur.execute(""" SELECT * FROM BossBooking WHERE player_id=:player_id """, {'player_id': player_id})
+        results = cur.fetchall()
+
+        conn.close()
+        return [BossBooking(result[0], result[1], result[4], result[5], result[6], result[7], overflow=result[2],
+                            ovf_time=result[3]) for result in results]
+
+    def get_boss_bookings_by_boss_id(self, boss_id: int) -> list:
+        """ Gets boss bookings by player Id """
+        if not boss_id:
+            raise ParameterIsNullError("Boss id cant be empty")
+
+        conn = sqlite3.connect(self.db)
+        cur = conn.cursor()
+
+        cur.execute(""" SELECT * FROM BossBooking WHERE boss_id=:boss_id """, {'boss_id': boss_id})
+        results = cur.fetchall()
+
+        conn.close()
+        return [BossBooking(result[0], result[1], result[4], result[5], result[6], result[7], overflow=result[2],
+                            ovf_time=result[3]) for result in results]
+
+    def get_all_boss_bookings_relevant(self, cur_boss: int, cur_lap: int, cb_id: int) -> list:
+        """ Gets all boss bookings that are relevant """
+        if not (cb_id and cur_lap and cur_boss):
+            raise ParameterIsNullError("Boss id and current lap and current boss cant be empty")
+
+        conn = sqlite3.connect(self.db)
+        cur = conn.cursor()
+        # retrieve bookings for current lap ignoring downed bosses
+        cur.execute(f"""
+                        SELECT bb.*
+                        FROM BossBooking bb
+                        JOIN Boss b ON b.id = bb.boss_id
+                        WHERE b.boss_number>={cur_boss} AND b.cb_id={cb_id} AND bb.lap={cur_lap} and """,)
+        results = cur.fetchall()
+        # retrieve bookings for laps after current one
+        cur.execute(f"""
+                        SELECT bb.*
+                        FROM BossBooking bb
+                        JOIN Boss b ON b.id = bb.boss_id
+                        WHERE b.cb_id={cb_id} AND bb.lap>={cur_lap+1} and """,)
+        results += cur.fetchall()
+        conn.close()
+        return [BossBooking(result[0], result[1], result[4], result[5], result[6], result[7], overflow=result[2],
+                            ovf_time=result[3]) for result in results]
+
+    def update_boss_booking(self, bb: BossBooking) -> BossBooking:
+        """ Update boss booking"""
+        conn = sqlite3.connect(self.db)
+        cur = conn.cursor()
+
+        bb_to_be_updated = self.get_boss_booking_by_id(bb.boss_booking_id)
+        if not bb_to_be_updated:
+            conn.close()
+            raise TableEntryDoesntExistsError(f'Boss booking id {bb.boss_booking_id}')
+
+        if not (bb.lap and bb.comp_name and bb.exp_damage):
+            conn.close()
+            raise ParameterIsNullError("Boss booking lap, comp_name, exp_damage cant be empty")
+
+        if bb.overflow and not bb.ovf_time:
+            conn.close()
+            raise ParameterIsNullError("Hit is marked as ovf but ovf_time is not set")
+        elif bb.overflow and bb.ovf_time:
+            cur.execute(""" 
+                           UPDATE BossBooking 
+                           SET lap=:lap AND overflow=:overflow AND ovf_time=:ovf_time AND comp_name=:comp_name 
+                           AND exp_damage=:exp_damage
+                           WHERE id=:id """,
+                        {'lap': bb.lap, 'overflow': bb.overflow, 'ovf_time': bb.ovf_time, 'comp_name': bb.comp_name,
+                         'exp_damage': bb.exp_damage, 'id': bb.boss_booking_id})
+        else:
+            cur.execute(""" 
+                            UPDATE BossBooking 
+                            SET lap=:lap AND comp_name=:comp_name AND exp_damage=:exp_damage
+                            WHERE id=:id """,
+                        {'lap': bb.lap, 'comp_name': bb.comp_name, 'exp_damage': bb.exp_damage,
+                         'id': bb.boss_booking_id})
+        conn.commit()
+
+        cur.execute("SELECT * FROM BossBooking WHERE id=:id", {'id': bb.boss_booking_id})
+        updated_result = cur.fetchone()
+        conn.close()
+        return BossBooking(updated_result[0], updated_result[1], updated_result[4], updated_result[5],
+                           updated_result[6], updated_result[7], overflow=updated_result[2], ovf_time=updated_result[3])

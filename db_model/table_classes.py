@@ -73,4 +73,45 @@ class TeamComposition:
                f'name: {self.name}\n'
                f'used: {self.used}\n'
                f'pcdi_id: {self.pcdi_id}\n')
-    
+
+
+class Boss:
+    def __init__(self, boss_id, name, boss_number, ranking, active, cb_id):
+        self.boss_id = boss_id
+        self.name = name
+        self.boss_number = boss_number
+        self.ranking = ranking
+        self.active = active
+        self.cb_id = cb_id
+
+    def __str__(self):
+        return (f"boss_id: {self.boss_id}\n"
+                f"name: {self.name}\n"
+                f"boss_number: {self.boss_number}\n"
+                f"ranking: {self.ranking}\n"
+                f"active: {self.active}\n"
+                f"cb_id: {self.cb_id}\n")
+
+
+class BossBooking:
+    def __init__(self, boss_booking_id, lap, comp_name, exp_damage, boss_id, player_id, overflow=False, ovf_time=''):
+        self.boss_booking_id = boss_booking_id
+        self.lap = lap
+        self.overflow = overflow
+        self.ovf_time = ovf_time
+        self.comp_name = comp_name
+        self.exp_damage = exp_damage
+        self.boss_id = boss_id
+        self.player_id = player_id
+
+    def __str__(self):
+        return (
+            f"boss_booking_id: {self.boss_booking_id}\n"
+            f"lap: {self.lap}\n"
+            f"overflow: {self.overflow}\n"
+            f"ovf_time: {self.ovf_time}\n"
+            f"comp_name: {self.comp_name}\n"
+            f"exp_damage: {self.exp_damage}\n"
+            f"boss_id: {self.boss_id}\n"
+            f"player_id: {self.player_id}"
+        )
