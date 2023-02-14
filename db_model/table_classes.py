@@ -10,7 +10,7 @@ class Clan:
 
 
 class Player:
-    def __init__(self, player_id, name, discord_id, clan_role):
+    def __init__(self, player_id, name, clan_role, discord_id,):
         self.player_id = player_id
         self.name = name
         self.clan_role = clan_role

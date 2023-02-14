@@ -122,10 +122,10 @@ class Service:
         # TODO: if implemented i need to create delete function of others tables and delete those before Clan table
         pass
 
-    def create_player(self, player_name: str, dis_id: int, clan_id=0) -> Player:
+    def create_player(self, player_name: str, clan_role: str, dis_id: int, clan_id=0) -> Player:
         """ Insert a new Player into the ClanPlayer table. """
-        if not player_name and not dis_id:
-            raise ParameterIsNullError("Clan name and discord_id cant be empty")
+        if not (player_name and dis_id and clan_role):
+            raise ParameterIsNullError("Clan name, discord_id and clan role cant be empty")
 
         conn = sqlite3.connect(self.db)
         cur = conn.cursor()
@@ -133,8 +133,8 @@ class Service:
         cur.execute(""" 
                     SELECT *
                     FROM Player 
-                    WHERE name=:name and discord_id=:discord_id """
-                    , {'name': player_name, 'discord_id': dis_id}
+                    WHERE discord_id=:discord_id"""
+                    , {'discord_id': dis_id}
                     )
         result = cur.fetchone()
 
@@ -142,14 +142,14 @@ class Service:
             raise ObjectExistsInDBError(result)
 
         cur.execute(""" 
-                    INSERT INTO Player(name,discord_id) VALUES (:name,:discord_id) """
-                    , {'name': player_name, 'discord_id': dis_id}
+                    INSERT INTO Player(name,discord_id,clan_role) VALUES (:name,:discord_id,: clan_role) """
+                    , {'name': player_name, 'discord_id': dis_id, 'clan_role': clan_role}
                     )
         player_id = cur.lastrowid
         if clan_id:
             cur.execute(f""" INSERT INTO ClanPlayer(clan_id,player_id) VALUES ({clan_id}, {player_id}) """)
 
-        player = Player(player_id, player_name, dis_id)
+        player = Player(player_id, player_name, clan_role, dis_id)
 
         conn.commit()
         conn.close()
@@ -164,7 +164,7 @@ class Service:
         conn = sqlite3.connect(self.db)
         cur = conn.cursor()
 
-        cur.execute(""" SELECT * FROM PLayer WHERE id=:id """, {'id': player_id})
+        cur.execute(""" SELECT * FROM Player WHERE id=:id """, {'id': player_id})
         result = cur.fetchone()
 
         if not result:
@@ -172,19 +172,19 @@ class Service:
             return None
 
         conn.close()
-        return Player(result[0], result[1], result[2])
+        return Player(result[0], result[1], result[2], result[3])
 
-    def get_player_by_discord_name_and_id(self, discord_name: str, discord_id: int) -> Clan or None:
+    def get_player_by_discord_id(self, discord_id: int) -> Player or None:
         """ Gets Player by discord name and id """
-        if not discord_name or not discord_id:
-            raise ParameterIsNullError("Discord name and id cant be empty")
+        if not discord_id:
+            raise ParameterIsNullError("Discord id cant be empty")
 
         conn = sqlite3.connect(self.db)
         cur = conn.cursor()
 
         cur.execute(""" 
-                    SELECT * FROM Player WHERE name=:name AND discord_id=:discord_id """,
-                    {'name': discord_name, 'discord_id': discord_id}
+                    SELECT * FROM Player WHERE discord_id=:discord_id """,
+                    {'discord_id': discord_id}
                     )
         result = cur.fetchone()
 
@@ -193,7 +193,7 @@ class Service:
             return None
 
         conn.close()
-        return Player(result[0], result[1], result[2])
+        return Player(result[0], result[1], result[2], result[3])
 
     def get_players(self) -> list:
         """ Gets all players """
@@ -203,7 +203,7 @@ class Service:
         results = cur.fetchall()
 
         conn.close()
-        return [Player(result[0], result[1], result[2]) for result in results]
+        return [Player(result[0], result[1], result[2], result[3]) for result in results]
 
     def get_players_from_clan(self, clan_id: int) -> list:
         """ Gets all players from clan"""
@@ -217,7 +217,7 @@ class Service:
         results = cur.fetchall()
 
         conn.close()
-        return [Player(result[0], result[1], result[2]) for result in results]
+        return [Player(result[0], result[1], result[2], result[3]) for result in results]
 
     def update_player(self, player: Player) -> Player:
         """ Update entry in player table """
@@ -229,27 +229,29 @@ class Service:
             conn.close()
             raise TableEntryDoesntExistsError(f'player id {player.player_id}')
 
-        if not player.name or not player.discord_id:
+        if not (player.name and player.discord_id and player.clan_role):
             conn.close()
-            raise ParameterIsNullError("Player name and discord_id cant be empty")
+            raise ParameterIsNullError("Player name, clan_role and discord_id cant be empty")
 
-        if player_to_be_updated.name != player.name and player_to_be_updated.discord_id != player.discord_id:
+        if player_to_be_updated.discord_id != player.discord_id:
             cur.execute("""
-                        SELECT * FROM Player WHERE name=:name AND discord_id=:discord_id AND clan_role=:clan_role"""
-                        , {'name': player.name, "discord_id": player.discord_id, "clan_role": player.clan_role})
+                        SELECT * FROM Player WHERE discord_id=:discord_id"""
+                        , {"discord_id": player.discord_id})
             result = cur.fetchone()
 
             if result:
                 conn.close()
                 raise ObjectExistsInDBError(result)
 
-        cur.execute(""" UPDATE Player SET name=:name AND discord_id=:discord_id WHERE id=:id """
-                    , {'id': player.player_id, 'name': player.name, "discord_id": player.discord_id})
+        cur.execute(""" 
+                        UPDATE Player SET name=:name AND discord_id=:discord_id AND clan_role=:clan_role WHERE id=:id """
+                    , {'id': player.player_id, 'name': player.name, 'clan_role': player.clan_role,
+                       "discord_id": player.discord_id})
         conn.commit()
         cur.execute("SELECT * FROM Player WHERE id=:id", {'id': player.player_id})
         updated_result = cur.fetchone()
         conn.close()
-        return Player(updated_result[0], updated_result[1], updated_result[2])
+        return Player(updated_result[0], updated_result[1], updated_result[2], updated_result[3])
 
     def create_clan_battle(self, clan_id: int, cb_name: str) -> ClanBattle:
         """ Insert a new cb into the CB table. """
