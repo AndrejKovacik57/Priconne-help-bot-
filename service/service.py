@@ -1,6 +1,6 @@
 import sqlite3
 from exceptions.exceptions import ParameterIsNullError, ObjectExistsInDBError, TableEntryDoesntExistsError, \
-    PlayerCBDayInfoLimitOfEntriesForPlayerAndCBReached
+    PlayerCBDayInfoLimitOfEntriesForPlayerAndCBReached, ClanBattleCantHaveMoreThenFiveDays
 from db_model.table_classes import Clan, Player, ClanBattle, PlayerCBDayInfo, TeamComposition, Boss, BossBooking
 
 
@@ -142,7 +142,7 @@ class Service:
             raise ObjectExistsInDBError(result)
 
         cur.execute(""" 
-                    INSERT INTO Player(name,discord_id,clan_role) VALUES (:name,:discord_id,: clan_role) """
+                    INSERT INTO Player(name,discord_id,clan_role) VALUES (:name,:discord_id,:clan_role) """
                     , {'name': player_name, 'discord_id': dis_id, 'clan_role': clan_role}
                     )
         player_id = cur.lastrowid
@@ -223,7 +223,6 @@ class Service:
         """ Update entry in player table """
         conn = sqlite3.connect(self.db)
         cur = conn.cursor()
-
         player_to_be_updated = self.get_player_by_id(player.player_id)
         if not player_to_be_updated:
             conn.close()
@@ -242,9 +241,8 @@ class Service:
             if result:
                 conn.close()
                 raise ObjectExistsInDBError(result)
-
         cur.execute(""" 
-                        UPDATE Player SET name=:name AND discord_id=:discord_id AND clan_role=:clan_role WHERE id=:id """
+                        UPDATE Player SET name=:name,discord_id=:discord_id,clan_role=:clan_role WHERE id=:id """
                     , {'id': player.player_id, 'name': player.name, 'clan_role': player.clan_role,
                        "discord_id": player.discord_id})
         conn.commit()
@@ -255,13 +253,14 @@ class Service:
 
     def create_clan_battle(self, clan_id: int, cb_name: str) -> ClanBattle:
         """ Insert a new cb into the CB table. """
-        if not cb_name or clan_id:
+        if not (cb_name and clan_id):
             raise ParameterIsNullError("Cb name and clan id cant be empty")
 
         conn = sqlite3.connect(self.db)
         cur = conn.cursor()
 
-        cur.execute(""" SELECT * FROM ClanBattle WHERE name=:name """, {'name': cb_name})
+        cur.execute(""" SELECT * FROM ClanBattle WHERE name=:name AND clan_id=:clan_id""",
+                    {'name': cb_name, 'clan_id': clan_id})
         result = cur.fetchone()
 
         if result:
@@ -293,11 +292,11 @@ class Service:
             return None
 
         conn.close()
-        return ClanBattle(result[0], result[1], result[2])
+        return ClanBattle(result[0], result[1], result[4], lap=result[2], tier=result[3])
 
     def get_clan_battle_by_name_and_clan_id(self, name: str, clan_id: int) -> ClanBattle or None:
         """ Gets cb by name and clan id """
-        if not clan_id or not name:
+        if not (clan_id and name):
             raise ParameterIsNullError("Cb name and clan id cant be empty")
 
         conn = sqlite3.connect(self.db)
@@ -313,7 +312,7 @@ class Service:
             return None
 
         conn.close()
-        return ClanBattle(result[0], result[1], result[2])
+        return ClanBattle(result[0], result[1], result[4], lap=result[2], tier=result[3])
 
     def get_clan_battles_in_clan(self, clan_id: int) -> list:
         """ Gets all cbs from clan"""
@@ -323,43 +322,45 @@ class Service:
         results = cur.fetchall()
 
         conn.close()
-        return [ClanBattle(result[0], result[1], result[2]) for result in results]
+        return [ClanBattle(result[0], result[1], result[4], lap=result[2], tier=result[3]) for result in results]
 
     def update_clan_batte(self, clan_battle: ClanBattle) -> ClanBattle:
         """ Update entry in clanbattle table """
         conn = sqlite3.connect(self.db)
         cur = conn.cursor()
-
-        clan_battle_to_be_updated = self.get_clan_battle_by_id(clan_battle.clan_id)
+        clan_battle_to_be_updated = self.get_clan_battle_by_id(clan_battle.cb_id)
         if not clan_battle_to_be_updated:
             conn.close()
             raise TableEntryDoesntExistsError(f'cb id {clan_battle_to_be_updated.clan_id}')
 
-        if not clan_battle.name or not clan_battle.lap or not clan_battle.tier:
+        if not (clan_battle.name and clan_battle.lap and clan_battle.tier):
             conn.close()
             raise ParameterIsNullError("ClanBattle name, lap, tier cant be empty")
 
         if clan_battle_to_be_updated.name != clan_battle.name:
+
             cur.execute("""
                            SELECT * FROM ClanBattle WHERE name=:name AND clan_id=:clan_id"""
-                        , {'name': clan_battle.name, "clan_id": clan_battle.clan_id})
+                        , {'name': clan_battle.name, 'clan_id': clan_battle.clan_id})
             result = cur.fetchone()
-
+            print(result)
             if result:
                 conn.close()
                 raise ObjectExistsInDBError(result)
 
-        cur.execute(""" UPDATE ClanBattle SET name=:name AND lap=:lap AND tier=:tier  WHERE id=:id """
-                    , {'name': clan_battle.name, 'lap': clan_battle.lap, "tier": clan_battle.tier})
+        cur.execute(""" UPDATE ClanBattle SET name=:name,lap=:lap,tier=:tier WHERE id=:id """
+                    , {'name': clan_battle.name, 'lap': clan_battle.lap, "tier": clan_battle.tier,
+                       "id": clan_battle.cb_id})
         conn.commit()
         cur.execute("SELECT * FROM ClanBattle WHERE id=:id", {'id': clan_battle.cb_id})
         updated_result = cur.fetchone()
         conn.close()
-        return ClanBattle(updated_result[0], updated_result[1], updated_result[2])
+        return ClanBattle(updated_result[0], updated_result[1], updated_result[4],
+                          lap=updated_result[2], tier=updated_result[3])
 
     def create_player_cb_day_info(self, cb_id, player_id) -> PlayerCBDayInfo:
         """ Insert a new day info in to table. """
-        if not cb_id or player_id:
+        if not (cb_id and player_id):
             raise ParameterIsNullError("Cb id and player id cant be empty")
 
         conn = sqlite3.connect(self.db)
@@ -387,7 +388,7 @@ class Service:
 
         return pcbdi
 
-    def get_pcdi_by_id(self, pcdi_id: int) -> PlayerCBDayInfo:
+    def get_pcdi_by_id(self, pcdi_id: int) -> PlayerCBDayInfo or None:
         """ Gets pcdi by id"""
         if not pcdi_id:
             raise ParameterIsNullError("PCDI id cant be empty")
@@ -397,14 +398,22 @@ class Service:
 
         cur.execute("""SELECT * FROM PlayerCBDayInfo WHERE id=:id""", {'id': pcdi_id})
         result = cur.fetchone()
+
+        if not result:
+            conn.close()
+            return None
+
         conn.close()
         return PlayerCBDayInfo(result[0], result[5], result[6], result[7], overflow=result[1], ovf_time=result[2],
                                hits=result[3], reset=result[4])
 
-    def get_all_pcdi_by_clan_player_id(self, player_id: int, day=0) -> list:
+    def get_all_pcdi_by_player_id(self, player_id: int, day=0) -> list:
         """ Gets pcdi by player id and day (optional) """
         if not player_id:
             raise ParameterIsNullError("Player id cant be empty")
+
+        if day > 5:
+            raise ClanBattleCantHaveMoreThenFiveDays(f"Day {day}")
 
         conn = sqlite3.connect(self.db)
         cur = conn.cursor()
@@ -422,7 +431,7 @@ class Service:
             result[0], result[5], result[6], result[7], overflow=result[1], ovf_time=result[2],
             hits=result[3], reset=result[4]) for result in results]
 
-    def get_all_pcdi_by_cb_id(self, cb_id: int, day: int) -> list:
+    def get_all_pcdi_by_cb_id(self, cb_id: int, day=0) -> list:
         """ Gets pcdi by cb id and day (optional) """
         if not cb_id:
             raise ParameterIsNullError("Cb id cant be empty")
@@ -454,12 +463,12 @@ class Service:
             conn.close()
             raise TableEntryDoesntExistsError(f'pcdi id {pcdi.pcbdi_id}')
 
-        if not (pcdi_to_be_updated.hits and pcdi_to_be_updated.reset and pcdi_to_be_updated.cb_day):
+        if not (pcdi_to_be_updated.hits and pcdi_to_be_updated.cb_day):
             conn.close()
             raise ParameterIsNullError("Pcdi hits, reset and cb_day cant be empty")
 
-        cur.execute(""" UPDATE PlayerCBDayInfo SET overflow=:overflow AND ovf_time=:ovf_time AND hits=:hits 
-                        AND reset=:reset AND cb_day=:cb_day WHERE id=:id """,
+        cur.execute(""" UPDATE PlayerCBDayInfo SET overflow=:overflow,ovf_time=:ovf_time,hits=:hits,reset=:reset,
+                        cb_day=:cb_day WHERE id=:id """,
                     {'overflow': pcdi.overflow, 'ovf_time': pcdi.ovf_time, 'hits': pcdi.hits, 'reset': pcdi.reset,
                      'cb_day': pcdi.cb_day, 'id': pcdi.pcbdi_id})
         conn.commit()
@@ -529,11 +538,11 @@ class Service:
             conn.close()
             raise TableEntryDoesntExistsError(f'Team composition id {tc.tc_id}')
 
-        if not (tc.name and tc.used):
+        if not tc.name:
             conn.close()
             raise ParameterIsNullError("Team composition  name, used cant be empty")
 
-        cur.execute(""" UPDATE TeamComposition SET name=:name AND used=:used WHERE id=:id """,
+        cur.execute(""" UPDATE TeamComposition SET name=:name,used=:used WHERE id=:id """,
                     {'name': tc.name, 'used': tc.used, 'id': tc.tc_id})
         conn.commit()
         cur.execute("SELECT * FROM TeamComposition WHERE id=:id", {'id': tc.tc_id})
@@ -541,7 +550,7 @@ class Service:
         conn.close()
         return TeamComposition(updated_result[0], updated_result[1], updated_result[2], updated_result[3])
 
-    def create_boss(self, name: str, boss_number: int, cb_id: int, ranking: int) -> Boss:
+    def create_boss(self, name: str, boss_number: int, ranking: int, cb_id: int) -> Boss:
         """ Insert a new boss into the Boss table. """
         if not (name and boss_number and cb_id):
             raise ParameterIsNullError("Boss name, cb_id and number cant be empty")
@@ -584,7 +593,7 @@ class Service:
         conn.close()
         return Boss(result[0], result[1], result[2], result[3], result[4], result[5])
 
-    def get_boss_name(self, boss_name: str, cb_id) -> Boss or None:
+    def get_boss_by_name(self, boss_name: str, cb_id: int) -> Boss or None:
         """ Gets Boss by name  and cb"""
         if not (boss_name and cb_id):
             raise ParameterIsNullError("Boss name and cb id cant be empty")
@@ -622,12 +631,12 @@ class Service:
             conn.close()
             raise TableEntryDoesntExistsError(f'Boss id {boss.boss_id}')
 
-        if not (boss.name and boss.boss_number and boss.ranking and boss.active):
+        if not (boss.name and boss.boss_number and boss.ranking):
             conn.close()
-            raise ParameterIsNullError("Boss name, boss_number, ranking, active cant be empty")
+            raise ParameterIsNullError("Boss name, boss_number, ranking cant be empty")
 
         cur.execute(""" 
-                    UPDATE Boss SET name=:name AND boss_number=:boss_number AND ranking=:ranking AND active=:active
+                    UPDATE Boss SET name=:name,boss_number=:boss_number,ranking=:ranking,active=:active
                     WHERE id=:id """,
                     {'name': boss.name, 'boss_number': boss.boss_number, 'ranking': boss.ranking, 'active': boss.active,
                      'id': boss.boss_id})
@@ -731,14 +740,14 @@ class Service:
                         SELECT bb.*
                         FROM BossBooking bb
                         JOIN Boss b ON b.id = bb.boss_id
-                        WHERE b.boss_number>={cur_boss} AND b.cb_id={cb_id} AND bb.lap={cur_lap} and """,)
+                        WHERE b.boss_number>={cur_boss} AND b.cb_id={cb_id} AND bb.lap={cur_lap}""")
         results = cur.fetchall()
         # retrieve bookings for laps after current one
         cur.execute(f"""
                         SELECT bb.*
                         FROM BossBooking bb
                         JOIN Boss b ON b.id = bb.boss_id
-                        WHERE b.cb_id={cb_id} AND bb.lap>={cur_lap+1} and """,)
+                        WHERE b.cb_id={cb_id} AND bb.lap>={cur_lap+1}""")
         results += cur.fetchall()
         conn.close()
         return [BossBooking(result[0], result[1], result[4], result[5], result[6], result[7], overflow=result[2],
@@ -764,16 +773,14 @@ class Service:
         elif bb.overflow and bb.ovf_time:
             cur.execute(""" 
                            UPDATE BossBooking 
-                           SET lap=:lap AND overflow=:overflow AND ovf_time=:ovf_time AND comp_name=:comp_name 
-                           AND exp_damage=:exp_damage
+                           SET lap=:lap,overflow=:overflow,ovf_time=:ovf_time,comp_name=:comp_name,exp_damage=:exp_damage
                            WHERE id=:id """,
                         {'lap': bb.lap, 'overflow': bb.overflow, 'ovf_time': bb.ovf_time, 'comp_name': bb.comp_name,
                          'exp_damage': bb.exp_damage, 'id': bb.boss_booking_id})
         else:
             cur.execute(""" 
                             UPDATE BossBooking 
-                            SET lap=:lap AND comp_name=:comp_name AND exp_damage=:exp_damage
-                            WHERE id=:id """,
+                            SET lap=:lap,comp_name=:comp_name,exp_damage=:exp_damage WHERE id=:id """,
                         {'lap': bb.lap, 'comp_name': bb.comp_name, 'exp_damage': bb.exp_damage,
                          'id': bb.boss_booking_id})
         conn.commit()

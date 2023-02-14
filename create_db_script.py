@@ -41,7 +41,7 @@ cur.execute("""
 cur.execute("""
         CREATE TABLE ClanBattle (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT UNIQUE NOT NULL,
+            name TEXT NOT NULL,
             lap INTEGER NOT NULL,
             tier INTEGER NOT NULL,
             clan_id INTEGER NOT NULL,

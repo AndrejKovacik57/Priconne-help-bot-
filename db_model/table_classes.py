@@ -24,11 +24,11 @@ class Player:
 
 
 class ClanBattle:
-    def __init__(self, cb_id, name, clan_id):
+    def __init__(self, cb_id, name, clan_id, lap=1, tier=1):
         self.cb_id = cb_id
         self.name = name
-        self.lap = 1
-        self.tier = 1
+        self.lap = lap
+        self.tier = tier
         self.clan_id = clan_id
 
     def __str__(self):
@@ -52,13 +52,13 @@ class PlayerCBDayInfo:
 
     def __str__(self):
         return (f"pcbdi_id: {self.pcbdi_id}\n"
-                f"cb_day: {self.cb_day}\n"
-                f"player_id: {self.player_id}\n"
-                f"cb_id: {self.cb_id}\n"
                 f"overflow: {self.overflow}\n"
                 f"ovf_time: {self.ovf_time}\n"
                 f"hits: {self.hits}\n"
-                f"reset: {self.reset}\n")
+                f"reset: {self.reset}\n"
+                f"cb_day: {self.cb_day}\n"
+                f"player_id: {self.player_id}\n"
+                f"cb_id: {self.cb_id}\n")
 
 
 class TeamComposition:
@@ -113,5 +113,5 @@ class BossBooking:
             f"comp_name: {self.comp_name}\n"
             f"exp_damage: {self.exp_damage}\n"
             f"boss_id: {self.boss_id}\n"
-            f"player_id: {self.player_id}"
+            f"player_id: {self.player_id}\n"
         )
