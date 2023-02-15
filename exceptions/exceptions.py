@@ -1,11 +1,24 @@
 
 class ObjectExistsInDBError(ValueError):
-    pass
+    def __init__(self, message):
+        super().__init__(message)
 
 
 class ParameterIsNullError(ValueError):
-    pass
+    def __init__(self, message):
+        super().__init__(message)
 
 
 class TableEntryDoesntExistsError(ValueError):
-    pass
+    def __init__(self, message):
+        super().__init__(message)
+
+
+class PlayerCBDayInfoLimitOfEntriesForPlayerAndCBReached(ValueError):
+    def __init__(self, message):
+        super().__init__(message)
+
+
+class ClanBattleCantHaveMoreThenFiveDays(ValueError):
+    def __init__(self, message):
+        super().__init__(message)
