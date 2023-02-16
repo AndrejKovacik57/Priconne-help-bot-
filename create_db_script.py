@@ -28,6 +28,18 @@ cur.execute("""
             discord_id INTEGER NOT NULL
         )
     """)
+
+cur.execute("""
+        CREATE TABLE ClanRole (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            clan_role TEXT NULL,
+            discord_id INTEGER NOT NULL,
+            player_id INTEGER NOT NULL,
+            FOREIGN KEY (player_id) REFERENCES Player(id)
+        )
+    """)
+
 cur.execute("""
         CREATE TABLE ClanPlayer (
             clan_id INTEGER NOT NULL,
