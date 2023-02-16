@@ -4,6 +4,7 @@ conn = sqlite3.connect('priconne_database.db')
 cur = conn.cursor()
 
 cur.execute("""DROP TABLE IF EXISTS Clan""")
+cur.execute("""DROP TABLE IF EXISTS ClanRole""")
 cur.execute("""DROP TABLE IF EXISTS Player""")
 cur.execute("""DROP TABLE IF EXISTS ClanPlayer""")
 cur.execute("""DROP TABLE IF EXISTS ClanBattle""")
@@ -21,32 +22,32 @@ cur.execute("""
     """)
 
 cur.execute("""
-        CREATE TABLE Player (
+        CREATE TABLE ClanRole (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
             clan_role TEXT NULL,
-            discord_id INTEGER NOT NULL
+            clan_id INTEGER NOT NULL,
+            FOREIGN KEY (clan_id) REFERENCES Clan(id)
         )
     """)
 
 cur.execute("""
-        CREATE TABLE ClanRole (
+        CREATE TABLE Player (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
-            clan_role TEXT NULL,
-            discord_id INTEGER NOT NULL,
-            player_id INTEGER NOT NULL,
-            FOREIGN KEY (player_id) REFERENCES Player(id)
+            discord_id INTEGER NOT NULL
         )
     """)
+
+
 
 cur.execute("""
         CREATE TABLE ClanPlayer (
             clan_id INTEGER NOT NULL,
             player_id INTEGER NOT NULL,
+            clan_role_id INTEGER NULL,
             FOREIGN KEY (clan_id) REFERENCES Clan(id), 
             FOREIGN KEY (player_id) REFERENCES Player(id),
-            UNIQUE (clan_id, player_id)
+            FOREIGN KEY (clan_role_id) REFERENCES ClanRole(id)
         )
     """)
 
