@@ -53,11 +53,11 @@ def run_discord_bot():
     ### LEAD ONLY Commands ###
 
 
-    # Create a clan
     # WIP - Need to connect to service for proper functionality
     @client.tree.command(name="createclan", description="Create clan")
     @app_commands.describe(clan = "Clan to create")
     async def createclan(interaction: discord.Interaction, clan: str):
+        """ Create clan """
         try:
             service.create_clan(clan)
             await interaction.response.send_message(f"{interaction.user.name} said to create the clan: '{clan}'")
@@ -66,25 +66,38 @@ def run_discord_bot():
             # print(f"Caught error: {e}")
 
     
-    # Add player to an existing clan
-    # WIP - Need to connect to service for proper functionality
-    # WIP - Need to make it so player is a DROPDOWN LIST / autocomplete for EXISTING CLANS
-    # WIP - Make it so clan is a DROPDOWN LIST / autocomplete for EXISTING CLANS
     @client.tree.command(name="addplayer", description="Add a player to a clan")
     @app_commands.describe(player = "Player to add", clan="Clan to add player to")
     async def addplayer(interaction: discord.Interaction, player: str, clan: str):
+        """ Add player to an existing clan """
         try:
-            await interaction.response.send_message(f"Adding {player} to clan: {clan}.")
+            temp = service.get_player_by_discord_id(interaction.user.id)
+            print(interaction.user.id)
+            print(temp)
+            # service.create_player(player, "Member", 1)
+            await interaction.response.send_message(f"Adding {player} to clan: {clan}.\n*(Still working on functionality)*")
         except ObjectExistsInDBError as e:
             await interaction.response.send_message(f"Clan: {clan} already exists!")
+    
+
+    @client.tree.command(name="deleteplayer", description="Delete a player")
+    @app_commands.describe(player = "Player to add")
+    async def deleteplayer(interaction: discord.Interaction, player: str):
+        """ Add player to an existing clan """
+        try:
+            temp = service.get_player_by_discord_id(interaction.user.id)
+            print(interaction.user.id)
+            print(temp)
+            # service.create_player(player, "Member", 1)
+            await interaction.response.send_message(f"Deleting player: {player}.\n*(Still working on functionality)*")
+        except ObjectExistsInDBError as e:
+            await interaction.response.send_message(f"Player: {player} doesn't exist!")
 
     
-    # Start clan battle
-    # WIP - Need to connect to service for proper functionality
-    # WIP - Need date conversion
     @client.tree.command(name="startclanbattle", description="Start clan battle on given date")
     @app_commands.describe(date = "Start date of CB")
     async def startclanbattle(interaction: discord.Interaction, date: str):
+        """ Start clan battle on given date """
         try:
             # service.create_clan_battle() Re-do parameters
             await interaction.response.send_message(f"Starting clan battle on {date}")
@@ -92,17 +105,14 @@ def run_discord_bot():
             return ""
 
 
-    # Check info about player
     # WIP - Need to connect to service for proper functionality
     @client.tree.command(name="playercheck", description="Hits left, bosses booked, reset used?")
     async def playercheck(interaction: discord.Interaction):
+        """ Check info about player """
         try:
-            
-            await interaction.response.send_message(f"""
-__**Info for player:**__ \_\_\_
-Hits Remaining: \_\_
-Bosses Booked: \_\_
-Reset available? (YES/NO)""")
+            temp = service.get_player_by_discord_id(interaction.user.id)
+            print(temp)
+            await interaction.response.send_message(f"__**Info for player:**__\n\_\_\_Hits Remaining: \_\_\nBosses Booked: \_\_\nReset available? (YES/NO)")
         except:
             return ""
     
@@ -110,22 +120,22 @@ Reset available? (YES/NO)""")
     ### GENERAL COMMANDS ###
 
 
-    # Create player
     # WIP - Need to connect to service for proper functionality
     @client.tree.command(name="createplayer", description="Create player")
     @app_commands.describe(player = "Player to create")
-    async def createplayer(interaction: discord.Interaction, player: str):
+    async def createplayer(interaction: discord.Interaction, player: str, role: str):
+        """ Create player """
         try:
-            service.create_player(player, interaction.user.id)
-            await interaction.response.send_message(f"Created {player}.")
+            createdPlayer = service.create_player(player, "Member", interaction.user.id)
+            await interaction.response.send_message(f"Created \n{createdPlayer}")
         except ObjectExistsInDBError as e:
             await interaction.response.send_message(f"Player: {player} already exists!")
 
     
-    # Check info about clan
     # WIP - Need to connect to service for proper functionality
     @client.tree.command(name="clancheck", description="Clan position, lap, tier, current boss (booked hits???), hits remaining")
     async def clancheck(interaction: discord.Interaction):
+        """ Check clan """
         try:
             service.get_clan_battles_in_clan("Automatically fetched clan_id / clan_name")
             await interaction.response.send_message(f"""
@@ -139,10 +149,10 @@ Hits Remaining: \_\_\_""")
             return ""
     
 
-    # Check info about self
     # WIP - Need to connect to service for proper functionality
     @client.tree.command(name="selfcheck", description="Hits left, reset used?")
     async def selfcheck(interaction: discord.Interaction):
+        """ Check info about self """
         try:
             service.get_player_by_id(interaction.user.id)
             await interaction.response.send_message(f"""
@@ -153,10 +163,10 @@ Reset available? (YES/NO)""")
             await interaction.response.send_message("You're not registered! Please register using **/createplayer**")
     
 
-    # Check info boss availability
     # WIP - Need to connect to service for proper functionality
     @client.tree.command(name="bossavailability", description="Displays hit bookings on all bosses")
     async def bossavailability(interaction: discord.Interaction):
+        """ Check info regarding boss availability """
         try:
             await interaction.response.send_message(f"""
 __**Overflow Count: \_\_\_**__
@@ -169,10 +179,10 @@ Boss 5: \_\_ hits booked""")
             return ""
 
 
-    # Check info regarding overflows
     # WIP - Need to connect to service for proper functionality
     @client.tree.command(name="ovf", description="Overflows currently in clan")
     async def ovf(interaction: discord.Interaction):
+        """ Check info regarding overflows existing in clan """
         try:
             await interaction.response.send_message(f"""
 __**Overflow Count: \_\_\_**__
@@ -184,11 +194,11 @@ Estimated Damage: \_\_\_\_""")
             return ""
     
 
-    # Book hit on boss
     # WIP - Need to connect to service for proper functionality
     @client.tree.command(name="bookhit", description="Book a hit on this boss")
     @app_commands.describe(boss = "Boss", expecteddamage = "Expected damage")
     async def bookhit(interaction: discord.Interaction, boss: str, expecteddamage: str):
+        """ Book a hit on boss """
         try:
             await interaction.response.send_message(f"""
 Booked hit on boss: {boss}
@@ -197,11 +207,11 @@ With expected damage: {expecteddamage}""")
             return ""
         
     
-    # Hit boss
     # WIP - Need to connect to service for proper functionality
     @client.tree.command(name="hit", description="Register hit")
     @app_commands.describe(boss = "Boss", ovftime = "Overflow time, if any")
     async def hit(interaction: discord.Interaction, boss: str, ovftime: str):
+        """ Record hit on boss """
         try:
             await interaction.response.send_message(f"""
 Logged hit onto boss: {boss}
