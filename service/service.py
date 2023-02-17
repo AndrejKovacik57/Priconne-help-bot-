@@ -2,7 +2,7 @@ import sqlite3
 from exceptions.exceptions import ParameterIsNullError, ObjectExistsInDBError, TableEntryDoesntExistsError, \
     PlayerCBDayInfoLimitOfEntriesForPlayerAndCBReached, ClanBattleCantHaveMoreThenFiveDays, ObjectDoesntExistsInDBError, \
     PlayerAlreadyInClanError, PlayerNotInClanError
-from db_model.table_classes import Clan, Player, ClanBattle, PlayerCBDayInfo, TeamComposition, Boss, BossBooking, \
+from db_model.table_classes import Clan, Player, ClanPlayer, ClanBattle, PlayerCBDayInfo, TeamComposition, Boss, BossBooking, \
     ClanRole
 
 
@@ -255,6 +255,24 @@ class Service:
 
         conn.close()
         return Player(result[0], result[1], result[2])
+    
+    def get_player_by_name(self, player_name: str) -> Player or None:
+        """ Gets Player by Id """
+        if not player_name:
+            raise ParameterIsNullError("Player name cant be empty")
+
+        conn = sqlite3.connect(self.db)
+        cur = conn.cursor()
+
+        cur.execute(""" SELECT * FROM Player WHERE name=:name """, {'name': player_name})
+        result = cur.fetchone()
+
+        if not result:
+            conn.close()
+            return None
+
+        conn.close()
+        return Player(result[0], result[1], result[2])
 
     def get_player_by_discord_id(self, discord_id: int) -> Player or None:
         """ Gets Player by discord name and id """
@@ -272,7 +290,7 @@ class Service:
 
         if not result:
             conn.close()
-            return None
+            raise ObjectDoesntExistsInDBError('This player doesn\'t exist')
 
         conn.close()
         return Player(result[0], result[1], result[2])
@@ -406,6 +424,29 @@ class Service:
         conn.commit()
         conn.close()
         return self.get_players_from_clan(clan_id)
+    
+    def get_clanplayer(self, player_id: int) -> list:
+        """ Remove player from clan """
+        conn = sqlite3.connect(self.db)
+        cur = conn.cursor()
+
+        player = self.get_player_by_id(player_id)
+
+        if not player:
+            conn.close()
+            raise ObjectDoesntExistsInDBError('This player doesn\'t exist')
+
+        cur.execute(""" SELECT * FROM ClanPlayer WHERE player_id=:player_id """,
+                    {'player_id': player_id})
+        result = cur.fetchone()
+
+        if not result:
+            conn.close()
+            raise PlayerNotInClanError('Player is not in a clan')
+
+        conn.commit()
+        conn.close()
+        return ClanPlayer(result[0], result[1], result[2])
 
     def create_clan_battle(self, clan_id: int, cb_name: str) -> ClanBattle:
         """ Insert a new cb into the CB table. """
