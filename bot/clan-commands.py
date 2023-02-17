@@ -26,8 +26,8 @@ class ClanGroup(app_commands.Group):
     async def list(self, interaction: discord.Interaction):
         """ List of clans """
         try:
-            clanList = service.get_clans()
-            await interaction.response.send_message(f"List of clans\n{clanList}")
+            clan_list = await service.get_clans()
+            await interaction.response.send_message(f"List of clans\n{clan_list}")
         except:
             await interaction.response.send_message(f"Error in command. Please try again in a few moments")
 
@@ -36,8 +36,8 @@ class ClanGroup(app_commands.Group):
     async def updatename(self, interaction: discord.Interaction, clan: str, newname: str):
         """ Update name of clan """
         try:
-            existingClan = service.get_clan_by_name(clan)
-            service.update_clan(Clan(existingClan[0], newname))
+            existingClan = await service.get_clan_by_name(clan)
+            await service.update_clan(Clan(existingClan[0], newname))
             await interaction.response.send_message(f"Changed clan name from **{clan}** to **{newname}**")
         except:
             await interaction.response.send_message(f"Error in command. Please try again in a few moments")
@@ -46,10 +46,10 @@ class ClanGroup(app_commands.Group):
     async def playerlist(self, interaction: discord.Interaction):
         """ Check list of players in clan """
         try:
-            playerCheck = service.get_player_by_discord_id(interaction.user.id)
-            clanPlayer = service.get_clanplayer(playerCheck[0])
-            clan = service.get_clan_by_id(clanPlayer[0])
-            playerList = service.get_players_from_clan(clan[0])
+            playerCheck = await service.get_player_by_discord_id(interaction.user.id)
+            clanPlayer = await service.get_clanplayer(playerCheck[0])
+            clan = await service.get_clan_by_id(clanPlayer[0])
+            playerList = await service.get_players_from_clan(clan[0])
             await interaction.response.send_message(f"List of players\n{playerList}")
         except ObjectDoesntExistsInDBError as e:
             await interaction.response.send_message(f"You don't exist!")
@@ -63,7 +63,7 @@ class ClanGroup(app_commands.Group):
         try:
             playerToAdd = await service.get_player_by_name(player)
             clanToJoin = await service.get_clan_by_name(clan)
-            service.add_player_to_clan(clanToJoin[0], playerToAdd[0])
+            await service.add_player_to_clan(clanToJoin[0], playerToAdd[0])
             await interaction.response.send_message(f"Added **{player}** to clan: **{clan}**.")
         except ObjectDoesntExistsInDBError as e:
             await interaction.response.send_message(f"Player and/or clan doesn't exist!")
@@ -79,9 +79,9 @@ class ClanGroup(app_commands.Group):
     async def removeplayer(self, interaction: discord.Interaction, player: str, clan: str):
         """ Remove player from clan """
         try:
-            playerToRemove = service.get_player_by_name(player)
-            clanToRemove = service.get_clan_by_name(clan)
-            service.remove_player_from_clan(clanToRemove[0], playerToRemove[0])
+            playerToRemove = await service.get_player_by_name(player)
+            clanToRemove = await service.get_clan_by_name(clan)
+            await service.remove_player_from_clan(clanToRemove[0], playerToRemove[0])
             await interaction.response.send_message(f"Removed **{player}** from clan: **{clan}**.")
         except ObjectDoesntExistsInDBError as e:
             await interaction.response.send_message(f"Player and/or clan doesn't exist!")
