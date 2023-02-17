@@ -14,24 +14,35 @@ class CreateGroup(app_commands.Group):
         self.service = Service("priconne_database")
 
     @app_commands.command(description="Create clan")
-    @app_commands.describe(clan="Clan to create")
-    async def clan(self, interaction: discord.Interaction, clan: str):
+    @app_commands.describe(clan_name="Clan to create")
+    async def clan(self, interaction: discord.Interaction, clan_name: str):
         """ Create clan """
         try:
-            await self.service.create_clan(clan)
-            await interaction.response.send_message(f"{interaction.user.name} said to create the clan: '{clan}'")
+            clan = await self.service.create_clan(clan_name)
+            await interaction.response.send_message(f"{clan}")
         except ObjectExistsInDBError as e:
-            await interaction.response.send_message(f"Clan: {clan} already exists!")
+            await interaction.response.send_message(e)
 
-    @app_commands.command(description="Create player")
-    @app_commands.describe(player="Player to create")
-    async def player(self, interaction: discord.Interaction, player: str):
+    @app_commands.command(description="Create clan role")
+    @app_commands.describe(role_name="Role to create")
+    async def role(self, interaction: discord.Interaction, player_name: str):
         """ Create player """
         try:
-            await self.service.create_player(player, interaction.user.id)
+            player = await self.service.create_player(player_name, interaction.user.id)
             await interaction.response.send_message(f"Created \n{player}")
         except ObjectExistsInDBError as e:
-            await interaction.response.send_message(f"Player: {player} already exists!")
+            await interaction.response.send_message(e)
+
+    @app_commands.command(description="Create player")
+    @app_commands.describe(player_name="Player to create")
+    async def player(self, interaction: discord.Interaction, player_name: str):
+        """ Create player """
+        try:
+            player = await self.service.create_player(player_name, interaction.user.id)
+            await interaction.response.send_message(f"Created \n{player}")
+        except ObjectExistsInDBError as e:
+            await interaction.response.send_message(e)
+
 
 
 async def setup(bot):

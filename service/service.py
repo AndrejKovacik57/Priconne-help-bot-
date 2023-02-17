@@ -11,7 +11,7 @@ class Service:
     def __init__(self, db_name: str):
         self.db = f'{db_name}.db'
 
-    async def create_clan(self, clan_name: str) -> Clan:
+    async def create_clan(self, clan_name: str, guild: str) -> Clan:
         """ Insert a new Clan into the Clan table. """
         if not clan_name:
             raise ParameterIsNullError("Clan name cant be empty")
@@ -24,7 +24,8 @@ class Service:
             if result:
                 raise ObjectExistsInDBError(result)
 
-            await cur.execute(""" INSERT INTO Clan(name) VALUES (:name) """, {'name': clan_name})
+            await cur.execute(""" INSERT INTO Clan(name, guild) VALUES (:name,:guild) """,
+                              {'name': clan_name, 'guild': guild})
             clan = Clan(cur.lastrowid, clan_name)
 
             await conn.commit()

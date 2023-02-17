@@ -47,9 +47,9 @@ class ClanGroup(app_commands.Group):
         """ Check list of players in clan """
         try:
             playerCheck = await service.get_player_by_discord_id(interaction.user.id)
-            clanPlayer = await service.get_clanplayer(playerCheck[0])
-            clan = await service.get_clan_by_id(clanPlayer[0])
-            playerList = await service.get_players_from_clan(clan[0])
+            clanPlayer = await service.get_clan_player(playerCheck.player_id)
+            clan = await service.get_clan_by_id(clanPlayer.player_id)
+            playerList = await service.get_players_from_clan(clan.clan_id)
             await interaction.response.send_message(f"List of players\n{playerList}")
         except ObjectDoesntExistsInDBError as e:
             await interaction.response.send_message(f"You don't exist!")
@@ -63,7 +63,7 @@ class ClanGroup(app_commands.Group):
         try:
             playerToAdd = await service.get_player_by_name(player)
             clanToJoin = await service.get_clan_by_name(clan)
-            await service.add_player_to_clan(clanToJoin[0], playerToAdd[0])
+            await service.add_player_to_clan(clanToJoin.clan_id, playerToAdd.player_id)
             await interaction.response.send_message(f"Added **{player}** to clan: **{clan}**.")
         except ObjectDoesntExistsInDBError as e:
             await interaction.response.send_message(f"Player and/or clan doesn't exist!")
@@ -81,7 +81,7 @@ class ClanGroup(app_commands.Group):
         try:
             playerToRemove = await service.get_player_by_name(player)
             clanToRemove = await service.get_clan_by_name(clan)
-            await service.remove_player_from_clan(clanToRemove[0], playerToRemove[0])
+            await service.remove_player_from_clan(clanToRemove.clan_id , playerToRemove.player_id)
             await interaction.response.send_message(f"Removed **{player}** from clan: **{clan}**.")
         except ObjectDoesntExistsInDBError as e:
             await interaction.response.send_message(f"Player and/or clan doesn't exist!")
