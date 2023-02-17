@@ -11,14 +11,15 @@ class Service:
     def __init__(self, db_name: str):
         self.db = f'{db_name}.db'
 
-    async def create_clan(self, clan_name: str, guild: str) -> Clan:
+    async def create_clan(self, clan_name: str, guild: int) -> Clan:
         """ Insert a new Clan into the Clan table. """
         if not clan_name:
             raise ParameterIsNullError("Clan name cant be empty")
         async with aiosqlite.connect(self.db) as conn:
             cur = await conn.cursor()
 
-            await cur.execute(""" SELECT * FROM Clan WHERE name=:name """, {'name': clan_name})
+            await cur.execute(""" SELECT * FROM Clan WHERE name=:name and guild=:guild""",
+                              {'name': clan_name, 'guild': guild})
             result = await cur.fetchone()
 
             if result:
@@ -26,7 +27,7 @@ class Service:
 
             await cur.execute(""" INSERT INTO Clan(name, guild) VALUES (:name,:guild) """,
                               {'name': clan_name, 'guild': guild})
-            clan = Clan(cur.lastrowid, clan_name)
+            clan = Clan(cur.lastrowid, guild, clan_name)
 
             await conn.commit()
 
@@ -46,7 +47,7 @@ class Service:
         if not result:
             return None
 
-        return Clan(result[0], result[1])
+        return Clan(result[0], result[1], result[2])
 
     async def get_clan_by_name(self, clan_name: str) -> Clan or None:
         """ Gets Clan by name """
@@ -62,7 +63,23 @@ class Service:
         if not result:
             return None
 
-        return Clan(result[0], result[1])
+        return Clan(result[0], result[1], result[2])
+
+    async def get_clan_by_guild(self, guild: int) -> Clan or None:
+        """ Gets Clan by guil """
+        if not guild:
+            raise ParameterIsNullError("Guild cant be empty")
+
+        async with aiosqlite.connect(self.db) as conn:
+            cur = await conn.cursor()
+
+            await cur.execute(""" SELECT * FROM Clan WHERE guild=:guild """, {'guild': guild})
+            result = await cur.fetchone()
+
+        if not result:
+            return None
+
+        return Clan(result[0], result[1], result[2])
 
     async def get_clans(self) -> list:
         """ Gets all clans """
@@ -71,7 +88,7 @@ class Service:
             await cur.execute(""" SELECT * FROM Clan """)
             results = await cur.fetchall()
 
-        return [Clan(result[0], result[1]) for result in results]
+        return [Clan(result[0], result[1], result[2]) for result in results]
 
     async def get_clans_paginate(self, limit: int, offset: int) -> list:
         """ Paginate clan table """
@@ -82,7 +99,7 @@ class Service:
             await cur.execute(""" SELECT * FROM Clan LIMIT :limit OFFSET :offset""", {'limit': limit, 'offset': offset})
             results = await cur.fetchall()
 
-        return [Clan(result[0], result[1]) for result in results]
+        return [Clan(result[0], result[1], result[2]) for result in results]
 
     async def update_clan(self, clan: Clan) -> Clan:
         """ Update clan table """
@@ -90,7 +107,7 @@ class Service:
         if not clan_to_be_updated:
             raise TableEntryDoesntExistsError(f'clan id {clan.clan_id}')
 
-        if not clan.name:
+        if not (clan.name and clan.guild):
             raise ParameterIsNullError("Clan name cant be empty")
 
         async with aiosqlite.connect(self.db) as conn:
@@ -102,11 +119,12 @@ class Service:
                 if result:
                     raise ObjectExistsInDBError(result)
 
-            await cur.execute(""" UPDATE Clan SET name=:name WHERE id=:id """, {'name': clan.name, 'id': clan.clan_id})
+            await cur.execute(""" UPDATE Clan SET name=:name, guild=:guild WHERE id=:id """,
+                              {'name': clan.name, 'id': clan.clan_id, 'guild': clan.guild})
             await conn.commit()
             await cur.execute("SELECT * FROM Clan WHERE id=:id", {'id': clan.clan_id})
             updated_result = await cur.fetchone()
-        return Clan(updated_result[0], updated_result[1])
+        return Clan(updated_result[0], updated_result[1], updated_result[2])
 
     def delete_clan(self):
         # TODO: if implemented i need to create delete function of others tables and delete those before Clan table
@@ -748,7 +766,7 @@ class Service:
 
         return [Boss(result[0], result[1], result[2], result[3], result[4], result[5]) for result in results]
 
-    def update_boss(self, boss: Boss) -> Boss:
+    async def update_boss(self, boss: Boss) -> Boss:
         """ Update boss """
 
         boss_to_be_updated = await self.get_boss_by_id(boss.boss_id)

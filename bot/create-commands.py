@@ -18,17 +18,17 @@ class CreateGroup(app_commands.Group):
     async def clan(self, interaction: discord.Interaction, clan_name: str):
         """ Create clan """
         try:
-            clan = await self.service.create_clan(clan_name)
-            await interaction.response.send_message(f"{clan}")
+            clan = await self.service.create_clan(clan_name, f'{interaction.guild_id}')
+            await interaction.response.send_message(f"guild: \n{clan}")
         except ObjectExistsInDBError as e:
             await interaction.response.send_message(e)
 
     @app_commands.command(description="Create clan role")
     @app_commands.describe(role_name="Role to create")
-    async def role(self, interaction: discord.Interaction, player_name: str):
+    async def role(self, interaction: discord.Interaction, role_name: str):
         """ Create player """
         try:
-            player = await self.service.create_player(player_name, interaction.user.id)
+            player = await self.service.create_player(role_name, interaction.user.id)
             await interaction.response.send_message(f"Created \n{player}")
         except ObjectExistsInDBError as e:
             await interaction.response.send_message(e)
