@@ -1,10 +1,13 @@
 import discord
 from discord import app_commands
 from discord.ext import commands
-from exceptions.exceptions import ParameterIsNullError, ObjectExistsInDBError, TableEntryDoesntExistsError
+from exceptions.exceptions import ParameterIsNullError, ObjectExistsInDBError, TableEntryDoesntExistsError, \
+    ClanBattleCantHaveMoreThenFiveDays
 import json
 import os
 from service.service import Service
+from datetime import datetime, timedelta
+import pytz
 
 
 # Open config.json file
@@ -84,13 +87,10 @@ def run_discord_bot():
             """, inline=False)
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
-
     ### ADMIN COMMANDS ###
-
 
     ### LEAD ONLY Commands ###
 
-    
     @client.tree.command(name="startclanbattle", description="Start clan battle on given date")
     @app_commands.describe(date = "Start date of CB")
     async def startclanbattle(interaction: discord.Interaction, date: str):
@@ -100,10 +100,8 @@ def run_discord_bot():
             await interaction.response.send_message(f"Starting clan battle on {date}")
         except:
             return ""
-    
 
     ### GENERAL COMMANDS ###
-    
 
     @client.tree.command(name="bossavailability", description="Displays hit bookings on all bosses")
     async def bossavailability(interaction: discord.Interaction):
@@ -113,7 +111,6 @@ def run_discord_bot():
         except:
             return ""
 
-
     @client.tree.command(name="ovf", description="Overflows currently in clan")
     async def ovf(interaction: discord.Interaction):
         """ Check info regarding overflows existing in clan """
@@ -121,31 +118,115 @@ def run_discord_bot():
             await interaction.response.send_message(f"__**Overflow Count: \_\_\_**__\nPlayer: \_\_\_\_\nBoss: \_\_\_\nTime: \_\_:\_\_\nEstimated Damage: \_\_\_\_")
         except:
             return ""
-    
 
     @client.tree.command(name="bookhit", description="Book a hit on this boss")
-    @app_commands.describe(boss = "Boss", expecteddamage = "Expected damage")
+    @app_commands.describe(boss="Boss", expecteddamage="Expected damage")
     async def bookhit(interaction: discord.Interaction, boss: str, expecteddamage: str):
         """ Book a hit on boss """
         try:
             await interaction.response.send_message(f"Booked hit on boss: {boss}\nWith expected damage: {expecteddamage}")
         except:
             return ""
-        
-    
-    @client.tree.command(name="hit", description="Register hit")
-    @app_commands.describe(boss = "Boss", ovftime = "Overflow time, if any")
-    async def hit(interaction: discord.Interaction, boss: str, ovftime: str):
-        """ Record hit on boss """
-        try:
-            await interaction.response.send_message(f"Logged hit onto boss: {boss}\nYou have {ovftime} overflow time\nYou have \_\_\_ hits remaining")
-        except:
-            return ""
 
+    async def update_bosses_when_tier_change(cb, boss_char, boss_tier):
+        bosses = await service.get_bosses(cb.id)
+        for boss_iter in bosses:
+            boss_iter.name = f'{boss_char}{boss_iter.number}'
+            boss_iter.ranking = boss_tier
+            if boss_iter.boss_number == 1:
+                boss_iter.active = True
+            await service.update_boss(boss_iter)
+
+    async def hit_kill(interaction: discord.Interaction, tc_name: str, ovf_time=''):
+        """ help function for hit and kill functions """
+        try:
+            player = await service.get_player_by_discord_id(interaction.user.id)
+            clan = await service.get_clan_by_guild(interaction.guild_id)
+            cb = await service.get_clan_battle_active_by_clan_id(clan.clan_id)
+
+            utc = pytz.UTC  # Create a UTC timezone object
+            current_time_object = datetime.now(tz=utc).date()
+            start_date_object = datetime.strptime(cb.start_date, "%d-%m-%Y").date()
+            end_date_object = datetime.strptime(cb.end_date, "%d-%m-%Y").date()
+
+            if start_date_object <= current_time_object <= end_date_object:
+                day_of_cb = (current_time_object - start_date_object).days + 1
+                pcdi = await service.get_pcdi_by_player_id_and_cb_id_and_day(player.player_id, cb.cb_id, day_of_cb)
+
+                if pcdi.hits == 0:
+                    await interaction.response.send_message(f"You dont have any hits left")
+
+                else:
+                    pcdi.hits -= 1
+                    pcdi = await service.update_pcdi(pcdi)
+                    tc = await service.get_team_composition_by_comp_name_and_pcdi_id(tc_name, pcdi.pcbdi_id)
+
+                    if not tc:
+                        tc = await service.create_team_composition(tc_name, pcdi.pcbdi_id, used=True)
+
+                    else:
+                        tc.used = True
+                        tc = await service.update_team_composition(tc)
+
+                    if ovf_time:
+                        pcdi.overflow = True
+                        pcdi.ovf_time = ovf_time
+                        pcdi = await service.update_pcdi(pcdi)
+
+                        boss = await service.get_active_boss_by_cb_id(cb.cb_id)
+                        boss.active = False
+                        boss = await service.update_boss(boss)
+
+                        lap = cb.lap + 1
+                        boss_number = boss.boss_number
+
+                        if boss_number == 5:
+                            if lap == 4:
+                                boss_tier = 2
+                                boss_char = 'B'
+                                await update_bosses_when_tier_change(cb, boss_char, boss_tier)
+                            elif lap == 11:
+                                boss_tier = 3
+                                boss_char = 'C'
+                                await update_bosses_when_tier_change(cb, boss_char, boss_tier)
+                            elif lap == 35:
+                                boss_tier = 4
+                                boss_char = 'D'
+                                await update_bosses_when_tier_change(cb, boss_char, boss_tier)
+                            else:
+                                boss = await service.get_boss_by_boss_number(1, cb.cb_id)
+                                boss.active = True
+                                boss = await service.update_boss(boss)
+                        else:
+                            boss_number += 1
+                            boss = await service.get_boss_by_boss_number(boss_number, cb.cb_id)
+                            boss.active = True
+                            boss = await service.update_boss(boss)
+
+                        await interaction.response.send_message(f"You recorded your hit and killed the boss with:"
+                                                                f"\n{tc}\nActive boss:{boss}"
+                                                                f"\nYour information for today: {pcdi}")
+                    else:
+                        await interaction.response.send_message(f"You recorded your hit with: \n {tc}")
+            else:
+                await interaction.response.send_message(f"Today is not cb day")
+        except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDays, TableEntryDoesntExistsError) as e:
+            return await interaction.response.send_message(e)
+
+    @client.tree.command(name="hit", description="Register hit")
+    @app_commands.describe(tc_name="Name of team composition")
+    async def hit(interaction: discord.Interaction, tc_name: str):
+        """ Record hit on boss """
+        await hit_kill(interaction, tc_name)
+
+    @client.tree.command(name="kill", description="Record hit and killing of the boss")
+    @app_commands.describe(tc_name="Team composition name", ovf_time="Ovf time")
+    async def kill(interaction: discord.Interaction, tc_name: str, ovf_time: str):
+        """ Record hit on boss """
+        await hit_kill(interaction, tc_name, ovf_time=ovf_time)
 
     @hit.error
     async def say_error(interaction: discord.Interaction, error):
         await interaction.response.send_message("Not allowed.", ephemeral=True)
-
 
     client.run(TOKEN)

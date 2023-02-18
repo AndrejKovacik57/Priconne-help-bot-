@@ -711,7 +711,7 @@ class Service:
                                overflow=updated_result[1], ovf_time=updated_result[2], hits=updated_result[3],
                                reset=updated_result[4])
 
-    async def create_team_composition(self, name: str, pcdi_id: int) -> TeamComposition:
+    async def create_team_composition(self, name: str, pcdi_id: int, used=False) -> TeamComposition:
         """ Insert a new team the Team Composition table. """
         if not (name and pcdi_id):
             raise ParameterIsNullError("Team name and pcdi_id cant be empty")
@@ -719,9 +719,9 @@ class Service:
         async with aiosqlite.connect(self.db) as conn:
             cur = await conn.cursor()
 
-            await cur.execute(""" INSERT INTO TeamComposition(name, used, pcdi_id) VALUES (:name, FALSE, :pcdi_id) """,
-                              {'name': name, 'pcdi_id': pcdi_id})
-            tc = TeamComposition(cur.lastrowid, name, False, pcdi_id)
+            await cur.execute(""" INSERT INTO TeamComposition(name, used, pcdi_id) VALUES (:name, :used, :pcdi_id) """,
+                              {'name': name, 'pcdi_id': pcdi_id, 'used': used})
+            tc = TeamComposition(cur.lastrowid, name, used, pcdi_id)
 
             await conn.commit()
 
@@ -736,6 +736,23 @@ class Service:
             cur = await conn.cursor()
 
             await cur.execute(""" SELECT * FROM TeamComposition WHERE id=:id """, {'id': tc_id})
+            result = await cur.fetchone()
+
+        if not result:
+            return None
+
+        return TeamComposition(result[0], result[1], result[2], result[3])
+
+    async def get_team_composition_by_comp_name_and_pcdi_id(self, comp_name: str, pcdi_id: int) -> TeamComposition or None:
+        """ Team composition by comp name and pcdi id"""
+        if not (pcdi_id and comp_name):
+            raise ParameterIsNullError("Pcdi id cant and comp name be empty")
+
+        async with aiosqlite.connect(self.db) as conn:
+            cur = await conn.cursor()
+
+            await cur.execute(""" SELECT * FROM TeamComposition WHERE name=:name AND pcdi_id=:pcdi_id """,
+                              {'name': comp_name, 'pcdi_id': pcdi_id})
             result = await cur.fetchone()
 
         if not result:
@@ -816,16 +833,33 @@ class Service:
 
         return Boss(result[0], result[1], result[2], result[3], result[4], result[5])
 
-    async def get_boss_by_name(self, boss_name: str, cb_id: int) -> Boss or None:
-        """ Gets Boss by name  and cb"""
-        if not (boss_name and cb_id):
-            raise ParameterIsNullError("Boss name and cb id cant be empty")
+    async def get_boss_by_boss_number(self, boss_number: int, cb_id: int) -> Boss or None:
+        """ Gets Boss by number  and cb"""
+        if not (boss_number and cb_id):
+            raise ParameterIsNullError("Boss number and cb id cant be empty")
 
         async with aiosqlite.connect(self.db) as conn:
             cur = await conn.cursor()
 
-            await cur.execute(""" SELECT * FROM Boss WHERE name=:name AND cb_id=:cb_id""",
-                              {'name': boss_name, 'cb_id': cb_id})
+            await cur.execute(""" SELECT * FROM Boss WHERE boss_number=:boss_number AND cb_id=:cb_id""",
+                              {'boss_number': boss_number, 'cb_id': cb_id})
+            result = await cur.fetchone()
+
+        if not result:
+            return None
+
+        return Boss(result[0], result[1], result[2], result[3], result[4], result[5])
+
+    async def get_active_boss_by_cb_id(self, cb_id: int) -> Boss or None:
+        """ Gets active boss by cb id"""
+        if not cb_id:
+            raise ParameterIsNullError("Cb id cant be empty")
+
+        async with aiosqlite.connect(self.db) as conn:
+            cur = await conn.cursor()
+
+            await cur.execute(""" SELECT * FROM Boss WHERE active=:active AND cb_id=:cb_id""",
+                              {'active': True, 'cb_id': cb_id})
             result = await cur.fetchone()
 
         if not result:

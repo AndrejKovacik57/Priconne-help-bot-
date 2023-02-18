@@ -50,8 +50,6 @@ class CreateGroup(app_commands.Group):
     @app_commands.describe(cb_name="Clan battle name", start_date="date format is DD-MM-YYY")
     async def cb(self, interaction: discord.Interaction, cb_name: str, start_date: str):
         """ Create cb """
-        tiers = ['A', 'B', 'C', 'D']
-
         try:
             clan = await self.service.get_clan_by_guild(interaction.guild_id)
             cb = await self.service.create_clan_battle(clan.clan_id, cb_name, start_date)
@@ -61,12 +59,11 @@ class CreateGroup(app_commands.Group):
                 for _ in range(5):
                     await self.service.create_player_cb_day_info(cb.cb_id, clan_player.player_id)
 
-            for index, tier in enumerate(tiers):
-                for boss_number in range(5):
-                    await self.service.create_boss(f'{tier}{boss_number + 1}', boss_number + 1, index + 1, cb.cb_id)
-            boss_a1 = await self.service.get_boss_by_name('A1', cb.cb_id)
-            boss_a1.active = True
-            await self.service.update_boss(boss_a1)
+            for boss_number in range(5):
+                await self.service.create_boss(f'A{boss_number + 1}', boss_number + 1, 1, cb.cb_id)
+            boss1 = await self.service.get_boss_by_boss_number(1, cb.cb_id)
+            boss1.active = True
+            await self.service.update_boss(boss1)
 
             await interaction.response.send_message(f"Created clan battle, bosses and player tables")
         except (ObjectExistsInDBError, TableEntryDoesntExistsError, PlayerCBDayInfoLimitOfEntriesForPlayerAndCBReached
