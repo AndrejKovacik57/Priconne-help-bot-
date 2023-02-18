@@ -61,7 +61,7 @@ class CreateGroup(app_commands.Group):
 
             for index, tier in enumerate(tiers):
                 for boss_number in range(5):
-                    await self.service.create_boss(f'{tier}{boss_number}', 1, index + 1, cb.cb_id)
+                    await self.service.create_boss(f'{tier}{boss_number + 1}', boss_number + 1, index + 1, cb.cb_id)
             boss_a1 = await self.service.get_boss_by_name('A1', cb.cb_id)
             boss_a1.active = True
             await self.service.update_boss(boss_a1)
