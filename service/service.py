@@ -66,7 +66,7 @@ class Service:
         return Clan(result[0], result[1], result[2])
 
     async def get_clan_by_guild(self, guild: int) -> Clan or None:
-        """ Gets Clan by guil """
+        """ Gets Clan by guild """
         if not guild:
             raise ParameterIsNullError("Guild cant be empty")
 
@@ -708,7 +708,7 @@ class Service:
         async with aiosqlite.connect(self.db) as conn:
             cur = await conn.cursor()
 
-            await cur.execute(""" SELECT * FROM Boss WHERE name=:name and cb_id=:cb_id""",
+            await cur.execute(""" SELECT * FROM Boss WHERE name=:name AND cb_id=:cb_id""",
                               {'name': name, 'cb_id': cb_id})
             result = await cur.fetchone()
 

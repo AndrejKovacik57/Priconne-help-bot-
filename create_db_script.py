@@ -17,7 +17,7 @@ cur.execute("""DROP TABLE IF EXISTS BossBooking""")
 cur.execute("""
         CREATE TABLE Clan (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            guild INTEGER UNIQUE NOT NULL,
+            guild INTEGER NOT NULL,
             name TEXT UNIQUE NOT NULL
         )
     """)
