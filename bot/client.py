@@ -128,6 +128,18 @@ def run_discord_bot():
         except:
             return ""
 
+    def get_cb_day(cb):
+        utc = pytz.UTC  # Create a UTC timezone object
+        current_time_object = datetime.now(tz=utc).date()
+        start_date_object = datetime.strptime(cb.start_date, "%d-%m-%Y").date()
+        end_date_object = datetime.strptime(cb.end_date, "%d-%m-%Y").date()
+
+        if start_date_object <= current_time_object <= end_date_object:
+            day_of_cb = (current_time_object - start_date_object).days + 1
+            return day_of_cb
+        else:
+            return None
+
     async def update_bosses_when_tier_change(cb, boss_char, boss_tier):
         bosses = await service.get_bosses(cb.id)
         for boss_iter in bosses:
@@ -137,6 +149,41 @@ def run_discord_bot():
                 boss_iter.active = True
             await service.update_boss(boss_iter)
 
+    async def update_lap_and_tier(interaction, cb, pcdi):
+        boss = await service.get_active_boss_by_cb_id(cb.cb_id)
+        boss.active = False
+        boss = await service.update_boss(boss)
+
+        lap = cb.lap + 1
+        boss_number = boss.boss_number
+
+        if boss_number == 5:
+            if lap == 4:
+                boss_tier = 2
+                boss_char = 'B'
+                await update_bosses_when_tier_change(cb, boss_char, boss_tier)
+            elif lap == 11:
+                boss_tier = 3
+                boss_char = 'C'
+                await update_bosses_when_tier_change(cb, boss_char, boss_tier)
+            elif lap == 35:
+                boss_tier = 4
+                boss_char = 'D'
+                await update_bosses_when_tier_change(cb, boss_char, boss_tier)
+            else:
+                boss = await service.get_boss_by_boss_number(1, cb.cb_id)
+                boss.active = True
+                boss = await service.update_boss(boss)
+        else:
+            boss_number += 1
+            boss = await service.get_boss_by_boss_number(boss_number, cb.cb_id)
+            boss.active = True
+            boss = await service.update_boss(boss)
+
+        await interaction.response.send_message(f"You recorded your hit and killed the boss."
+                                                f"\nActive boss:{boss}"
+                                                f"\nYour information for today: {pcdi}")
+
     async def hit_kill(interaction: discord.Interaction, tc_name: str, ovf_time=''):
         """ help function for hit and kill functions """
         try:
@@ -144,13 +191,9 @@ def run_discord_bot():
             clan = await service.get_clan_by_guild(interaction.guild_id)
             cb = await service.get_clan_battle_active_by_clan_id(clan.clan_id)
 
-            utc = pytz.UTC  # Create a UTC timezone object
-            current_time_object = datetime.now(tz=utc).date()
-            start_date_object = datetime.strptime(cb.start_date, "%d-%m-%Y").date()
-            end_date_object = datetime.strptime(cb.end_date, "%d-%m-%Y").date()
+            day_of_cb = get_cb_day(cb)
 
-            if start_date_object <= current_time_object <= end_date_object:
-                day_of_cb = (current_time_object - start_date_object).days + 1
+            if day_of_cb:
                 pcdi = await service.get_pcdi_by_player_id_and_cb_id_and_day(player.player_id, cb.cb_id, day_of_cb)
 
                 if pcdi.hits == 0:
@@ -173,39 +216,7 @@ def run_discord_bot():
                         pcdi.ovf_time = ovf_time
                         pcdi = await service.update_pcdi(pcdi)
 
-                        boss = await service.get_active_boss_by_cb_id(cb.cb_id)
-                        boss.active = False
-                        boss = await service.update_boss(boss)
-
-                        lap = cb.lap + 1
-                        boss_number = boss.boss_number
-
-                        if boss_number == 5:
-                            if lap == 4:
-                                boss_tier = 2
-                                boss_char = 'B'
-                                await update_bosses_when_tier_change(cb, boss_char, boss_tier)
-                            elif lap == 11:
-                                boss_tier = 3
-                                boss_char = 'C'
-                                await update_bosses_when_tier_change(cb, boss_char, boss_tier)
-                            elif lap == 35:
-                                boss_tier = 4
-                                boss_char = 'D'
-                                await update_bosses_when_tier_change(cb, boss_char, boss_tier)
-                            else:
-                                boss = await service.get_boss_by_boss_number(1, cb.cb_id)
-                                boss.active = True
-                                boss = await service.update_boss(boss)
-                        else:
-                            boss_number += 1
-                            boss = await service.get_boss_by_boss_number(boss_number, cb.cb_id)
-                            boss.active = True
-                            boss = await service.update_boss(boss)
-
-                        await interaction.response.send_message(f"You recorded your hit and killed the boss with:"
-                                                                f"\n{tc}\nActive boss:{boss}"
-                                                                f"\nYour information for today: {pcdi}")
+                        await update_lap_and_tier(interaction, cb, pcdi)
                     else:
                         await interaction.response.send_message(f"You recorded your hit with: \n {tc}")
             else:
@@ -222,8 +233,51 @@ def run_discord_bot():
     @client.tree.command(name="kill", description="Record hit and killing of the boss")
     @app_commands.describe(tc_name="Team composition name", ovf_time="Ovf time")
     async def kill(interaction: discord.Interaction, tc_name: str, ovf_time: str):
-        """ Record hit on boss """
+        """ Record hit on boss and moves to another (updates lap and tier if needed)"""
         await hit_kill(interaction, tc_name, ovf_time=ovf_time)
+
+    @client.tree.command(name="ovf hit", description="Removes ovf from your profile")
+    async def ovf_hit(interaction: discord.Interaction):
+        """ Record ovf """
+        try:
+            player = await service.get_player_by_discord_id(interaction.user.id)
+            clan = await service.get_clan_by_guild(interaction.guild_id)
+            cb = await service.get_clan_battle_active_by_clan_id(clan.clan_id)
+
+            day_of_cb = get_cb_day(cb)
+
+            if day_of_cb:
+                pcdi = await service.get_pcdi_by_player_id_and_cb_id_and_day(player.player_id, cb.cb_id, day_of_cb)
+                pcdi.overflow = False
+                pcdi.ovf_time = ''
+                pcdi = await service.update_pcdi(pcdi)
+                await interaction.response.send_message(f"You have used your ovf: \n{pcdi}")
+            else:
+                await interaction.response.send_message(f"Today is not cb day")
+        except ValueError as e:
+            return await interaction.response.send_message(e)
+
+    @client.tree.command(name="ovf kill", description="Kill boss with ovf and removes ovf from your profile")
+    async def ovf_kill(interaction: discord.Interaction):
+        """  Record ovf and moves to another (updates lap and tier if needed)"""
+        try:
+            player = await service.get_player_by_discord_id(interaction.user.id)
+            clan = await service.get_clan_by_guild(interaction.guild_id)
+            cb = await service.get_clan_battle_active_by_clan_id(clan.clan_id)
+
+            day_of_cb = get_cb_day(cb)
+
+            if day_of_cb:
+                pcdi = await service.get_pcdi_by_player_id_and_cb_id_and_day(player.player_id, cb.cb_id, day_of_cb)
+                pcdi.overflow = False
+                pcdi.ovf_time = ''
+                pcdi = await service.update_pcdi(pcdi)
+
+                await update_lap_and_tier(interaction, cb, pcdi)
+            else:
+                await interaction.response.send_message(f"Today is not cb day")
+        except ValueError as e:
+            return await interaction.response.send_message(e)
 
     @hit.error
     async def say_error(interaction: discord.Interaction, error):
