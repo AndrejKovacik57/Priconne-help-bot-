@@ -18,17 +18,15 @@ else:
         json.dump(configTemplate, f)
 
 
-# dbfile = f"{os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..', 'config.json'))}"
-
-# class MyGroup(app_commands.Group):
-#     ...
-
-# playerGroup = MyGroup(name="player", description="Player commands")
-
 TOKEN = configData["TOKEN"]
 prefix = configData["Prefix"]
 service = Service("priconne_database")
 client = commands.Bot(command_prefix="!", intents=discord.Intents.all())
+
+
+# def is_owner(interaction: discord.Interaction):
+#     if interaction.user.id == interaction.guild.role
+
 
 def run_discord_bot():
     @client.event
@@ -50,12 +48,41 @@ def run_discord_bot():
 
     @client.tree.command(name="hello")
     async def hello(interaction: discord.Interaction):
-        await interaction.response.send_message(f"Hi fellow cosplayer {interaction.user.mention}! I'm Marin", ephemeral=False)
+        await interaction.response.send_message(f"Hi fellow cosplayer {interaction.user.mention}! Your Discord ID is {interaction.user.id}. I'm Marin", ephemeral=False)
 
     
     @client.tree.command(name="help")
     async def help(interaction: discord.Interaction):
-        await interaction.response.send_message(f"Hi fellow cosplayer {interaction.user.mention}! I'm Marin! Below are the list of commands\n**__Create__**\n**create clan `clan`**: Create clan called `clan`\n**create player `player`**: Create player called `player`\n\n**__Clan__**\n**clan check**: Check info regarding own clan\n**clan list**: Get list of clans\n**clan updatename `clan` `newname`**: Change name of `clan` to `newname`\n**clan playerlist**: Check list of players in clan\n**clan addplayer `player` `clan`**: Add `player` to `clan`\n**clan removeplayer `player` `clan`**: Remove `player` from `clan`\n\n**__Player__**\n**player delete `player`**: Delete `player`\n**player selfcheck**: Check info regarding self\n**player check `player`**: Check info regarding `player`", ephemeral=True)
+        embed = discord.Embed(title="Marin Bot Commands", color=0x3083e3,
+            description="""
+                Hi fellow **Cosplayer**! I'm a CB bot, designed to make your CB life easier!
+
+                **help**: Shows list of commands.
+                **invite**: Bot invite link *(WIP)*.
+            """)
+        # embed.set_author(name="MangaUpdates", icon_url=self.bot.user.avatar.url)
+        # embed.set_author(name="Marin")
+        embed.add_field(name="__Create__", 
+            value="""
+                **create clan `clan`**: Create clan called `clan`.
+                **create player `player`**: Create player called `player`.
+            """, inline=False)
+        embed.add_field(name="__Clan__",
+            value="""
+                **clan check**: Check info regarding own clan.
+                **clan list**:  Get list of clans.
+                **clan updatename `clan` `newname`**: Change name of `clan` to `newname`.
+                **clan playerlist**: Check list of players in clan.
+                **clan addplayer `player` `clan`**: Add `player` to `clan`.
+                **clan removeplayer `player` `clan`**: Remove `player` from `clan`.
+            """, inline=False)
+        embed.add_field(name="__Player__",
+            value="""
+                **player delete `player`**: Delete `player`.
+                **player selfcheck**: Check info regarding self.
+                **player check `player`**: Check info regarding `player`.
+            """, inline=False)
+        await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
     ### ADMIN COMMANDS ###
@@ -114,6 +141,11 @@ def run_discord_bot():
             await interaction.response.send_message(f"Logged hit onto boss: {boss}\nYou have {ovftime} overflow time\nYou have \_\_\_ hits remaining")
         except:
             return ""
+
+
+    @hit.error
+    async def say_error(interaction: discord.Interaction, error):
+        await interaction.response.send_message("Not allowed.", ephemeral=True)
 
 
     client.run(TOKEN)
