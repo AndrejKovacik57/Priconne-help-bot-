@@ -19,6 +19,11 @@ class PlayerNotInClanError(ValueError):
         super().__init__(message)
 
 
+class ThereIsAlreadyActiveCBError(ValueError):
+    def __init__(self, message):
+        super().__init__(message)
+
+
 class ParameterIsNullError(ValueError):
     def __init__(self, message):
         super().__init__(message)

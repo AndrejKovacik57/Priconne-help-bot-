@@ -1,10 +1,11 @@
 import aiosqlite
 from exceptions.exceptions import ParameterIsNullError, ObjectExistsInDBError, TableEntryDoesntExistsError, \
     PlayerCBDayInfoLimitOfEntriesForPlayerAndCBReached, ClanBattleCantHaveMoreThenFiveDays, ObjectDoesntExistsInDBError, \
-    PlayerAlreadyInClanError, PlayerNotInClanError
+    PlayerAlreadyInClanError, PlayerNotInClanError, ThereIsAlreadyActiveCBError
 from db_model.table_classes import Clan, Player, ClanPlayer, ClanBattle, PlayerCBDayInfo, TeamComposition, Boss, \
     BossBooking, \
     ClanRole
+from datetime import datetime, timedelta
 
 
 class Service:
@@ -420,10 +421,16 @@ class Service:
             await conn.commit()
         return ClanPlayer(result[0], result[1], result[2])
 
-    async def create_clan_battle(self, clan_id: int, cb_name: str) -> ClanBattle:
-        """ Insert a new cb into the CB table. """
-        if not (cb_name and clan_id):
-            raise ParameterIsNullError("Cb name and clan id cant be empty")
+    async def create_clan_battle(self, clan_id: int, cb_name: str, start_date: str) -> ClanBattle:
+        """ Insert a new cb into the CB table.
+            start_date: date format is DD-MM-YYY
+        """
+        if not (cb_name and clan_id and start_date):
+            raise ParameterIsNullError("Cb name, start date and clan id cant be empty")
+
+        start_date_object = datetime.strptime(start_date, "%d-%m-%Y").date()
+        end_date_object = start_date_object + timedelta(days=4)
+        end_date = end_date_object.strftime("%d-%m-%Y")
 
         async with aiosqlite.connect(self.db) as conn:
             cur = await conn.cursor()
@@ -435,11 +442,12 @@ class Service:
             if result:
                 raise ObjectExistsInDBError(result)
 
-            await cur.execute(""" INSERT INTO ClanBattle(name, lap, tier, clan_id) 
-                                VALUES (:name,:lap,:tier,:clan_id) """,
-                              {'name': cb_name, 'lap': 1, 'tier': 1, 'clan_id': clan_id})
+            await cur.execute(""" INSERT INTO ClanBattle(name, lap, tier, start_date, end_date, active, clan_id) 
+                                VALUES (:name,:lap,:tier,:start_date,:end_date,:active,:clan_id) """,
+                              {'name': cb_name, 'lap': 1, 'tier': 1, 'clan_id': clan_id, 'start_date': start_date,
+                               'end_date': end_date, 'active': False})
 
-            cb = ClanBattle(cur.lastrowid, cb_name, clan_id)
+            cb = ClanBattle(cur.lastrowid, cb_name, clan_id, start_date, end_date, False)
 
             await conn.commit()
 
@@ -459,7 +467,8 @@ class Service:
         if not result:
             return None
 
-        return ClanBattle(result[0], result[1], result[4], lap=result[2], tier=result[3])
+        return ClanBattle(result[0], result[1], result[7], result[4], result[5], result[6], lap=result[2],
+                          tier=result[3])
 
     async def get_clan_battle_by_name_and_clan_id(self, name: str, clan_id: int) -> ClanBattle or None:
         """ Gets cb by name and clan id """
@@ -477,7 +486,8 @@ class Service:
             if not result:
                 return None
 
-        return ClanBattle(result[0], result[1], result[4], lap=result[2], tier=result[3])
+        return ClanBattle(result[0], result[1], result[7], result[4], result[5], result[6], lap=result[2],
+                          tier=result[3])
 
     async def get_clan_battles_in_clan(self, clan_id: int) -> list:
         """ Gets all cbs from clan"""
@@ -486,7 +496,58 @@ class Service:
             await cur.execute(f"""SELECT * FROM ClanBattle WHERE clan_id=:clan_id""", {'clan_id': clan_id})
             results = await cur.fetchall()
 
-        return [ClanBattle(result[0], result[1], result[4], lap=result[2], tier=result[3]) for result in results]
+        return [ClanBattle(result[0], result[1], result[7], result[4], result[5], result[6], lap=result[2],
+                           tier=result[3]) for result in results]
+
+    async def get_clan_battle_active_by_clan_id(self, clan_id: int) -> ClanBattle or None:
+        """ Get clan battle active """
+        async with aiosqlite.connect(self.db) as conn:
+            cur = await conn.cursor()
+            await cur.execute(f"""SELECT * FROM ClanBattle WHERE clan_id=:clan_id AND active=:active""",
+                              {'clan_id': clan_id, 'active': True})
+            result = await cur.fetchone()
+
+        if not result:
+            return None
+
+        return ClanBattle(result[0], result[1], result[7], result[4], result[5], result[6], lap=result[2],
+                          tier=result[3])
+
+    async def set_clan_battle_active_by_name(self, cb_name: str, clan_id: int) -> ClanBattle:
+        """ Set clan battle to active """
+        async with aiosqlite.connect(self.db) as conn:
+            cur = await conn.cursor()
+            await cur.execute(f"""SELECT * FROM ClanBattle WHERE clan_id=:clan_id AND active=:active""",
+                              {'clan_id': clan_id, 'active': True})
+            result = await cur.fetchone()
+
+            if result:
+                raise ThereIsAlreadyActiveCBError(result)
+
+            await cur.execute(""" UPDATE ClanBattle SET active=:active WHERE name=:name AND clan_id=:clan_id """
+                              , {'active': True, 'name': cb_name, "clan_id": clan_id})
+            await conn.commit()
+            await cur.execute("SELECT * FROM ClanBattle WHERE name=:name AND clan_id=:clan_id """
+                              , {'name': cb_name, "clan_id": clan_id})
+            updated_result = await cur.fetchone()
+
+        return ClanBattle(updated_result[0], updated_result[1], updated_result[7], updated_result[4], updated_result[5],
+                          updated_result[6], lap=updated_result[2], tier=updated_result[3])
+
+    async def set_clan_battle_inactive_by_name(self, cb_name: str, clan_id: int) -> ClanBattle:
+        """ Set clan battle to inactive """
+        async with aiosqlite.connect(self.db) as conn:
+            cur = await conn.cursor()
+
+            await cur.execute(""" UPDATE ClanBattle SET active=:active WHERE name=:name AND clan_id=:clan_id """
+                              , {'active': False, 'name': cb_name, "clan_id": clan_id})
+            await conn.commit()
+            await cur.execute("SELECT * FROM ClanBattle WHERE name=:name AND clan_id=:clan_id """
+                              , {'name': cb_name, "clan_id": clan_id})
+            updated_result = await cur.fetchone()
+
+        return ClanBattle(updated_result[0], updated_result[1], updated_result[7], updated_result[4], updated_result[5],
+                          updated_result[6], lap=updated_result[2], tier=updated_result[3])
 
     async def update_clan_batte(self, clan_battle: ClanBattle) -> ClanBattle:
         """ Update entry in clanbattle table """
@@ -515,8 +576,8 @@ class Service:
             await conn.commit()
             await cur.execute("SELECT * FROM ClanBattle WHERE id=:id", {'id': clan_battle.cb_id})
             updated_result = await cur.fetchone()
-        return ClanBattle(updated_result[0], updated_result[1], updated_result[4],
-                          lap=updated_result[2], tier=updated_result[3])
+        return ClanBattle(updated_result[0], updated_result[1], updated_result[7], updated_result[4], updated_result[5],
+                          updated_result[6], lap=updated_result[2], tier=updated_result[3])
 
     async def create_player_cb_day_info(self, cb_id, player_id) -> PlayerCBDayInfo:
         """ Insert a new day info in to table. """
@@ -564,8 +625,8 @@ class Service:
         return PlayerCBDayInfo(result[0], result[5], result[6], result[7], overflow=result[1], ovf_time=result[2],
                                hits=result[3], reset=result[4])
 
-    async def get_all_pcdi_by_player_id(self, player_id: int, day=0) -> list:
-        """ Gets pcdi by player id and day (optional) """
+    async def get_pcdi_by_player_id_and_cb_id_and_day(self, player_id: int, cb_id: int, day: int) -> PlayerCBDayInfo:
+        """ Gets pcdi by player id and cb id and day (optional) """
         if not player_id:
             raise ParameterIsNullError("Player id cant be empty")
 
@@ -576,17 +637,32 @@ class Service:
             cur = await conn.cursor()
             if day:
                 await cur.execute("""
-                            SELECT * FROM PlayerCBDayInfo WHERE player_id=:player_id AND cb_day=:cb_day""",
-                                  {'player_id': player_id, 'cb_day': day})
+                            SELECT * FROM PlayerCBDayInfo WHERE player_id=:player_id AND cb_day=:cb_day AND cb_id=:cb_id""",
+                                  {'player_id': player_id, 'cb_day': day, 'cb_id': cb_id})
             else:
                 await cur.execute(""" 
-                            SELECT * FROM PlayerCBDayInfo WHERE player_id=:player_id""",
-                                  {'player_id': player_id, 'cb_day': day})
+                            SELECT * FROM PlayerCBDayInfo WHERE player_id=:player_id AND cb_id=:cb_id""",
+                                  {'player_id': player_id, 'cb_id': cb_id})
+            result = await cur.fetchone()
+
+        return PlayerCBDayInfo(result[0], result[5], result[6], result[7], overflow=result[1], ovf_time=result[2],
+                               hits=result[3], reset=result[4])
+
+    async def get_pcdi_by_player_id_and_cb_id(self, player_id: int, cb_id: int) -> list:
+        """ Gets pcdis by player id and cb id """
+        if not player_id:
+            raise ParameterIsNullError("Player id cant be empty")
+
+        async with aiosqlite.connect(self.db) as conn:
+            cur = await conn.cursor()
+
+            await cur.execute(""" 
+                        SELECT * FROM PlayerCBDayInfo WHERE player_id=:player_id AND cb_id=:cb_id""",
+                              {'player_id': player_id, 'cb_id': cb_id})
             results = await cur.fetchall()
 
-        return [PlayerCBDayInfo(
-            result[0], result[5], result[6], result[7], overflow=result[1], ovf_time=result[2],
-            hits=result[3], reset=result[4]) for result in results]
+        return [PlayerCBDayInfo(result[0], result[5], result[6], result[7], overflow=result[1], ovf_time=result[2],
+                                hits=result[3], reset=result[4]) for result in results]
 
     async def get_all_pcdi_by_cb_id(self, cb_id: int, day=0) -> list:
         """ Gets pcdi by cb id and day (optional) """
@@ -910,14 +986,15 @@ class Service:
                                UPDATE BossBooking 
                                SET lap=:lap,overflow=:overflow,ovf_time=:ovf_time,comp_name=:comp_name,exp_damage=:exp_damage
                                WHERE id=:id """,
-                            {'lap': bb.lap, 'overflow': bb.overflow, 'ovf_time': bb.ovf_time, 'comp_name': bb.comp_name,
-                             'exp_damage': bb.exp_damage, 'id': bb.boss_booking_id})
+                                  {'lap': bb.lap, 'overflow': bb.overflow, 'ovf_time': bb.ovf_time,
+                                   'comp_name': bb.comp_name,
+                                   'exp_damage': bb.exp_damage, 'id': bb.boss_booking_id})
             else:
                 await cur.execute(""" 
                                 UPDATE BossBooking 
                                 SET lap=:lap,comp_name=:comp_name,exp_damage=:exp_damage WHERE id=:id """,
-                            {'lap': bb.lap, 'comp_name': bb.comp_name, 'exp_damage': bb.exp_damage,
-                             'id': bb.boss_booking_id})
+                                  {'lap': bb.lap, 'comp_name': bb.comp_name, 'exp_damage': bb.exp_damage,
+                                   'id': bb.boss_booking_id})
             await conn.commit()
 
             await cur.execute("SELECT * FROM BossBooking WHERE id=:id", {'id': bb.boss_booking_id})

@@ -48,11 +48,14 @@ class ClanRole:
 
 
 class ClanBattle:
-    def __init__(self, cb_id, name, clan_id, lap=1, tier=1):
+    def __init__(self, cb_id, name, clan_id, start_date, end_date, active, lap=1, tier=1):
         self.cb_id = cb_id
         self.name = name
         self.lap = lap
         self.tier = tier
+        self.start_date = start_date
+        self.end_date = end_date
+        self.active = active
         self.clan_id = clan_id
 
     def __str__(self):
@@ -60,6 +63,9 @@ class ClanBattle:
                 f"name: {self.name}\n"
                 f"lap: {self.lap}\n"
                 f"tier: {self.tier}\n"
+                f"start_date: {self.start_date}\n"
+                f"end_date: {self.end_date}\n"
+                f"active: {self.active}\n"
                 f"clan_id: {self.clan_id}\n")
 
 

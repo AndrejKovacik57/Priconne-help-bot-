@@ -58,6 +58,9 @@ cur.execute("""
             name TEXT NOT NULL,
             lap INTEGER NOT NULL,
             tier INTEGER NOT NULL,
+            start_date TEXT NOT NULL,
+            end_date TEXT NOT NULL,
+            active INTEGER NOT NULL,
             clan_id INTEGER NOT NULL,
             FOREIGN KEY (clan_id) REFERENCES Clan(id)
         )

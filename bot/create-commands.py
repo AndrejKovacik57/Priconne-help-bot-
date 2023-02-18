@@ -6,6 +6,8 @@ from exceptions.exceptions import ParameterIsNullError, ObjectExistsInDBError, T
 from service.service import Service
 from db_model.table_classes import Clan, Player, ClanPlayer, ClanBattle, PlayerCBDayInfo, TeamComposition, Boss, BossBooking, \
     ClanRole
+from datetime import datetime, timedelta
+import pytz
 
 
 class CreateGroup(app_commands.Group):
@@ -45,14 +47,14 @@ class CreateGroup(app_commands.Group):
             await interaction.response.send_message(e)
 
     @app_commands.command(description="Create clan battle")
-    @app_commands.describe(cb_name="Clan battle name")
-    async def cb(self, interaction: discord.Interaction, cb_name: str):
+    @app_commands.describe(cb_name="Clan battle name", start_date="date format is DD-MM-YYY")
+    async def cb(self, interaction: discord.Interaction, cb_name: str, start_date: str):
         """ Create cb """
         tiers = ['A', 'B', 'C', 'D']
 
         try:
             clan = await self.service.get_clan_by_guild(interaction.guild_id)
-            cb = await self.service.create_clan_battle(clan.clan_id, cb_name)
+            cb = await self.service.create_clan_battle(clan.clan_id, cb_name, start_date)
             clan_players = await self.service.get_players_from_clan(clan.clan_id)
 
             for clan_player in clan_players:
@@ -69,6 +71,31 @@ class CreateGroup(app_commands.Group):
             await interaction.response.send_message(f"Created clan battle, bosses and player tables")
         except (ObjectExistsInDBError, TableEntryDoesntExistsError, PlayerCBDayInfoLimitOfEntriesForPlayerAndCBReached
                 , TableEntryDoesntExistsError) as e:
+            await interaction.response.send_message(e)
+
+    @app_commands.command(description="Create team composition")
+    @app_commands.describe(tc_name="Team composition to create for current day")
+    async def team_composition(self, interaction: discord.Interaction, tc_name: str):
+        """ Create team composition """
+        try:
+            clan = await self.service.get_clan_by_guild(interaction.guild_id)
+            cb = await self.service.get_clan_battle_active_by_clan_id(clan.clan_id)
+            player = await self.service.get_player_by_discord_id(interaction.user.id)
+
+            utc = pytz.UTC  # Create a UTC timezone object
+            current_time_object = datetime.now(tz=utc).date()
+            start_date_object = datetime.strptime(cb.start_date, "%d-%m-%Y").date()
+            end_date_object = datetime.strptime(cb.end_date, "%d-%m-%Y").date()
+            if start_date_object <= current_time_object <= end_date_object:
+                day_of_cb = (current_time_object - start_date_object).days + 1
+
+                pcdi = await self.service.get_pcdi_by_player_id_and_cb_id_and_day(player.player_id, cb.cb_id, day_of_cb)
+                tc = await self.service.create_team_composition(tc_name, pcdi.pcbdi_id)
+
+                await interaction.response.send_message(f"Created \n{tc}")
+            else:
+                await interaction.response.send_message(f"Today is not cb day")
+        except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDays, ValueError) as e:
             await interaction.response.send_message(e)
 
 
