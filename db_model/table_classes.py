@@ -70,10 +70,12 @@ class ClanBattle:
 
 
 class PlayerCBDayInfo:
-    def __init__(self, pcbdi_id, cb_day, player_id, cb_id, overflow=False, ovf_time='', hits=3, reset=True):
+    def __init__(self, pcbdi_id, cb_day, player_id, cb_id, overflow=False, ovf_time='', ovf_comp='', hits=3,
+                 reset=True):
         self.pcbdi_id = pcbdi_id
         self.overflow = overflow
         self.ovf_time = ovf_time
+        self.ovf_comp = ovf_comp
         self.hits = hits
         self.reset = reset
         self.cb_day = cb_day

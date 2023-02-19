@@ -622,8 +622,8 @@ class Service:
         if not result:
             return None
 
-        return PlayerCBDayInfo(result[0], result[5], result[6], result[7], overflow=result[1], ovf_time=result[2],
-                               hits=result[3], reset=result[4])
+        return PlayerCBDayInfo(result[0], result[6], result[7], result[8], overflow=result[1], ovf_time=result[2],
+                               ovf_comp=result[3], hits=result[4], reset=result[5])
 
     async def get_pcdi_by_player_id_and_cb_id_and_day(self, player_id: int, cb_id: int, day: int) -> PlayerCBDayInfo:
         """ Gets pcdi by player id and cb id and day (optional) """
@@ -645,8 +645,8 @@ class Service:
                                   {'player_id': player_id, 'cb_id': cb_id})
             result = await cur.fetchone()
 
-        return PlayerCBDayInfo(result[0], result[5], result[6], result[7], overflow=result[1], ovf_time=result[2],
-                               hits=result[3], reset=result[4])
+        return PlayerCBDayInfo(result[0], result[6], result[7], result[8], overflow=result[1], ovf_time=result[2],
+                               ovf_comp=result[3], hits=result[4], reset=result[5])
 
     async def get_pcdi_by_player_id_and_cb_id(self, player_id: int, cb_id: int) -> list:
         """ Gets pcdis by player id and cb id """
@@ -661,11 +661,13 @@ class Service:
                               {'player_id': player_id, 'cb_id': cb_id})
             results = await cur.fetchall()
 
-        return [PlayerCBDayInfo(result[0], result[5], result[6], result[7], overflow=result[1], ovf_time=result[2],
-                                hits=result[3], reset=result[4]) for result in results]
+        return [PlayerCBDayInfo(result[0], result[6], result[7], result[8], overflow=result[1], ovf_time=result[2],
+                                ovf_comp=result[3], hits=result[4], reset=result[5]) for result in results]
 
-    async def get_all_pcdi_by_cb_id(self, cb_id: int, day=0) -> list:
-        """ Gets pcdi by cb id and day (optional) """
+    async def get_all_pcdi_ovf_by_cb_id(self, cb_id: int, ovf: bool, day=0) -> tuple:
+        """ Gets pcdi and players by cb id and day (optional) and ovf
+            Returns tuple of pcdi list tuple[0] and players list tuple[1]
+         """
         if not cb_id:
             raise ParameterIsNullError("Cb id cant be empty")
 
@@ -673,17 +675,22 @@ class Service:
             cur = await conn.cursor()
             if day:
                 await cur.execute("""
-                            SELECT * FROM PlayerCBDayInfo WHERE cb_id=:cb_id AND cb_day=:cb_day""",
-                                  {'cb_id': cb_id, 'cb_day': day})
+                            SELECT pcdi.*,p.* FROM PlayerCBDayInfo AS pcdi  JOIN Player AS p ON pcdi.player_id = p.id 
+                            WHERE pcdi.cb_id=:cb_id AND pcdi.cb_day=:cb_day AND pcdi.overflow=:overflow""",
+                                  {'cb_id': cb_id, 'cb_day': day, 'overflow': ovf})
             else:
                 await cur.execute(""" 
-                            SELECT * FROM PlayerCBDayInfo WHERE cb_id=:cb_id""",
-                                  {'cb_id': cb_id, 'cb_day': day})
+                            SELECT pcdi.*,p.* FROM PlayerCBDayInfo AS pcdi  JOIN Player AS p ON pcdi.player_id = p.id 
+                            WHERE pcdi.cb_id=:cb_id AND pcdi.overflow=:overflow""",
+                                  {'cb_id': cb_id, 'cb_day': day, 'overflow': ovf})
             results = await cur.fetchall()
 
-        return [PlayerCBDayInfo(
-            result[0], result[5], result[6], result[7], overflow=result[1], ovf_time=result[2],
-            hits=result[3], reset=result[4]) for result in results]
+        tup = tuple(
+            [(PlayerCBDayInfo(result[0], result[6], result[7], result[8], overflow=result[1], ovf_time=result[2],
+                              ovf_comp=result[3], hits=result[4], reset=result[5]),
+              Player(result[8], result[9], result[10])) for result in
+             results])
+        return tup
 
     async def update_pcdi(self, pcdi: PlayerCBDayInfo) -> PlayerCBDayInfo:
         """ Update pcdi table """
@@ -707,9 +714,9 @@ class Service:
             await cur.execute("SELECT * FROM PlayerCBDayInfo WHERE id=:id", {'id': pcdi.pcbdi_id})
             updated_result = await cur.fetchone()
 
-        return PlayerCBDayInfo(updated_result[0], updated_result[5], updated_result[6], updated_result[7],
-                               overflow=updated_result[1], ovf_time=updated_result[2], hits=updated_result[3],
-                               reset=updated_result[4])
+        return PlayerCBDayInfo(updated_result[0], updated_result[6], updated_result[7], updated_result[8],
+                               overflow=updated_result[1], ovf_time=updated_result[2],
+                               ovf_comp=updated_result[3], hits=updated_result[4], reset=updated_result[5])
 
     async def get_today_hits_left(self, day: int, cb_id: int) -> int or None:
         """ Gets hits left for today """
@@ -765,7 +772,8 @@ class Service:
 
         return TeamComposition(result[0], result[1], result[2], result[3])
 
-    async def get_team_composition_by_comp_name_and_pcdi_id(self, comp_name: str, pcdi_id: int) -> TeamComposition or None:
+    async def get_team_composition_by_comp_name_and_pcdi_id(self, comp_name: str,
+                                                            pcdi_id: int) -> TeamComposition or None:
         """ Team composition by comp name and pcdi id"""
         if not (pcdi_id and comp_name):
             raise ParameterIsNullError("Pcdi id cant and comp name be empty")

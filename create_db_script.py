@@ -70,6 +70,7 @@ cur.execute("""
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             overflow INTEGER NULL,
             ovf_time TEXT NULL,
+            ovf_comp TEXT NULL,
             hits INTEGER NOT NULL,
             reset INTEGER NOT NULL,
             cb_day INTEGER NOT NULL,
