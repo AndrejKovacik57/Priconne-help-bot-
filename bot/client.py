@@ -157,7 +157,6 @@ def run_discord_bot():
         except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDaysError, TableEntryDoesntExistsError) as e:
             return await interaction.response.send_message(e)
 
-
     async def get_page_html(link):
         headers = {'User-Agent': user_agent.random}
         async with aiohttp.ClientSession() as session:
@@ -184,7 +183,6 @@ def run_discord_bot():
             if clan_name_found == clan_name:
                 #           RANKING                         CLAN NAME
                 return ranking
-
 
     ### TESTING / MISC COMMANDS ###
 
@@ -391,6 +389,9 @@ def run_discord_bot():
     async def check(interaction: discord.Interaction):
         """ Check status of the clan """
         try:
+            guild = await service.get_guild_by_id(interaction.guild.id)
+            if not guild:
+                raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
             clan = await service.get_clan_by_guild(interaction.guild_id)
             cb = await service.get_clan_battle_active_by_clan_id(clan.clan_id)
             cb_day = get_cb_day(cb)
@@ -494,6 +495,7 @@ def run_discord_bot():
 
         except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDaysError, TableEntryDoesntExistsError) as e:
             return await interaction.response.send_message(e)
+
 
     @hit.error
     async def say_error(interaction: discord.Interaction, error):
