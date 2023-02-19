@@ -1,7 +1,8 @@
 import aiosqlite
 from exceptions.exceptions import ParameterIsNullError, ObjectExistsInDBError, TableEntryDoesntExistsError, \
-    PlayerCBDayInfoLimitOfEntriesForPlayerAndCBReached, ClanBattleCantHaveMoreThenFiveDays, ObjectDoesntExistsInDBError, \
-    PlayerAlreadyInClanError, PlayerNotInClanError, ThereIsAlreadyActiveCBError
+    PlayerCBDayInfoLimitOfEntriesForPlayerAndCBReached, ClanBattleCantHaveMoreThenFiveDaysError, \
+    ObjectDoesntExistsInDBError, PlayerAlreadyInClanError, PlayerNotInClanError, ThereIsAlreadyActiveCBError, \
+    DesiredBossIsDeadError
 from db_model.table_classes import Clan, Player, ClanPlayer, ClanBattle, PlayerCBDayInfo, TeamComposition, Boss, \
     BossBooking, \
     ClanRole, Guild, GuildRole
@@ -778,7 +779,7 @@ class Service:
             raise ParameterIsNullError("Player id cant be empty")
 
         if day > 5:
-            raise ClanBattleCantHaveMoreThenFiveDays(f"Day {day}")
+            raise ClanBattleCantHaveMoreThenFiveDaysError(f"Day {day}")
 
         async with aiosqlite.connect(self.db) as conn:
             cur = await conn.cursor()
@@ -832,12 +833,11 @@ class Service:
                                   {'cb_id': cb_id, 'cb_day': day, 'overflow': ovf})
             results = await cur.fetchall()
 
-        tup = tuple(
+        return tuple(
             [(PlayerCBDayInfo(result[0], result[6], result[7], result[8], overflow=result[1], ovf_time=result[2],
                               ovf_comp=result[3], hits=result[4], reset=result[5]),
               Player(result[8], result[9], result[10])) for result in
              results])
-        return tup
 
     async def update_pcdi(self, pcdi: PlayerCBDayInfo) -> PlayerCBDayInfo:
         """ Update pcdi table """
@@ -871,7 +871,7 @@ class Service:
             raise ParameterIsNullError("Cb id cant be empty")
 
         if day > 5:
-            raise ClanBattleCantHaveMoreThenFiveDays(f"Day {day}")
+            raise ClanBattleCantHaveMoreThenFiveDaysError(f"Day {day}")
 
         async with aiosqlite.connect(self.db) as conn:
             cur = await conn.cursor()
@@ -1153,30 +1153,31 @@ class Service:
         return [BossBooking(result[0], result[1], result[4], result[5], result[6], result[7], overflow=result[2],
                             ovf_time=result[3]) for result in results]
 
-    async def get_all_boss_bookings_relevant(self, cur_boss: int, cur_lap: int, cb_id: int) -> list:
-        """ Gets all boss bookings that are relevant """
-        if not (cb_id and cur_lap and cur_boss):
+    async def get_all_boss_bookings_by_lap(self, cur_boss: int, desired_boss: int, cur_lap: int, lap: int, cb_id: int) \
+            -> tuple:
+        """ Gets all boss bookings that are relevant in lap
+        Returning tuple [0] booking [1] boss [2] player"""
+        if not (cb_id and lap and cur_boss):
             raise ParameterIsNullError("Boss id and current lap and current boss cant be empty")
-
+        if cur_lap == lap and (cur_boss > desired_boss):
+            raise DesiredBossIsDeadError('Boss is dead')
         async with aiosqlite.connect(self.db) as conn:
             cur = await conn.cursor()
-            # retrieve bookings for current lap ignoring downed bosses
-            await cur.execute(f"""
-                            SELECT bb.*
-                            FROM BossBooking bb
-                            JOIN Boss b ON b.id = bb.boss_id
-                            WHERE b.boss_number>={cur_boss} AND b.cb_id={cb_id} AND bb.lap={cur_lap}""")
-            results = await cur.fetchall()
-            # retrieve bookings for laps after current one
-            await cur.execute(f"""
-                            SELECT bb.*
-                            FROM BossBooking bb
-                            JOIN Boss b ON b.id = bb.boss_id
-                            WHERE b.cb_id={cb_id} AND bb.lap>={cur_lap + 1}""")
-            results += await cur.fetchall()
 
-        return [BossBooking(result[0], result[1], result[4], result[5], result[6], result[7], overflow=result[2],
-                            ovf_time=result[3]) for result in results]
+            await cur.execute(f"""
+                            SELECT bb.*, b.*, p.*
+                            FROM BossBooking bb
+                            JOIN Boss b ON b.id = bb.boss_id
+                            JOIN Player p ON p.id = bb.player_id
+                            WHERE b.boss_number={desired_boss} AND b.cb_id={cb_id} AND bb.lap={lap}""")
+            results = await cur.fetchall()
+
+        return tuple([(
+                BossBooking(result[0], result[1], result[4], result[5], result[6], result[7], overflow=result[2],
+                            ovf_time=result[3]),
+                Boss(result[8], result[9], result[10], result[11], result[12], result[13]),
+                Player(result[14], result[15], result[16])
+            ) for result in results])
 
     async def update_boss_booking(self, bb: BossBooking) -> BossBooking:
         """ Update boss booking"""
