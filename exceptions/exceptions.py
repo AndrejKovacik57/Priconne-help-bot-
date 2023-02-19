@@ -39,6 +39,11 @@ class PlayerCBDayInfoLimitOfEntriesForPlayerAndCBReached(ValueError):
         super().__init__(message)
 
 
-class ClanBattleCantHaveMoreThenFiveDays(ValueError):
+class ClanBattleCantHaveMoreThenFiveDaysError(ValueError):
+    def __init__(self, message):
+        super().__init__(message)
+
+
+class DesiredBossIsDeadError(ValueError):
     def __init__(self, message):
         super().__init__(message)
