@@ -711,6 +711,28 @@ class Service:
                                overflow=updated_result[1], ovf_time=updated_result[2], hits=updated_result[3],
                                reset=updated_result[4])
 
+    async def get_today_hits_left(self, day: int, cb_id: int) -> int or None:
+        """ Gets hits left for today """
+        if not cb_id:
+            raise ParameterIsNullError("Cb id cant be empty")
+
+        if day > 5:
+            raise ClanBattleCantHaveMoreThenFiveDays(f"Day {day}")
+
+        async with aiosqlite.connect(self.db) as conn:
+            cur = await conn.cursor()
+
+            await cur.execute("""
+                               SELECT SUM(hits) FROM PlayerCBDayInfo WHERE cb_day=:cb_day AND cb_id=:cb_id""",
+                              {'cb_day': day, 'cb_id': cb_id})
+
+            result = await cur.fetchone()
+
+        if not result:
+            return None
+
+        return result[0]
+
     async def create_team_composition(self, name: str, pcdi_id: int, used=False) -> TeamComposition:
         """ Insert a new team the Team Composition table. """
         if not (name and pcdi_id):

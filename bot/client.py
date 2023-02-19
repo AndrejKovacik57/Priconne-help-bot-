@@ -8,6 +8,10 @@ import os
 from service.service import Service
 from datetime import datetime, timedelta
 import pytz
+import re
+from bs4 import BeautifulSoup
+from fake_useragent import UserAgent  # pip install fake-useragent
+import aiohttp
 
 
 # Open config.json file
@@ -24,6 +28,7 @@ else:
 TOKEN = configData["TOKEN"]
 prefix = configData["Prefix"]
 service = Service("priconne_database")
+user_agent = UserAgent(browsers=["chrome", "edge", "firefox", "safari", "opera"])
 client = commands.Bot(command_prefix="!", intents=discord.Intents.all())
 
 
@@ -150,23 +155,27 @@ def run_discord_bot():
             await service.update_boss(boss_iter)
 
     async def update_lap_and_tier(interaction, cb, pcdi):
+        tier2_lap = 4
+        tier3_lap = 11
+        tier4_lap = 35
         boss = await service.get_active_boss_by_cb_id(cb.cb_id)
         boss.active = False
         boss = await service.update_boss(boss)
+        boss_killed_name = boss.name
 
         lap = cb.lap + 1
         boss_number = boss.boss_number
 
-        if boss_number == 5:
+        if boss_number == tier2_lap:
             if lap == 4:
                 boss_tier = 2
                 boss_char = 'B'
                 await update_bosses_when_tier_change(cb, boss_char, boss_tier)
-            elif lap == 11:
+            elif lap == tier3_lap:
                 boss_tier = 3
                 boss_char = 'C'
                 await update_bosses_when_tier_change(cb, boss_char, boss_tier)
-            elif lap == 35:
+            elif lap == tier4_lap:
                 boss_tier = 4
                 boss_char = 'D'
                 await update_bosses_when_tier_change(cb, boss_char, boss_tier)
@@ -180,9 +189,8 @@ def run_discord_bot():
             boss.active = True
             boss = await service.update_boss(boss)
 
-        await interaction.response.send_message(f"You recorded your hit and killed the boss."
-                                                f"\nActive boss:{boss}"
-                                                f"\nYour information for today: {pcdi}")
+        await interaction.response.send_message(f"You recorded your hit and killed the {boss_killed_name}."
+                                                f"\nActive boss:{boss.name}")
 
     async def hit_kill(interaction: discord.Interaction, tc_name: str, ovf_time=''):
         """ help function for hit and kill functions """
@@ -218,7 +226,7 @@ def run_discord_bot():
 
                         await update_lap_and_tier(interaction, cb, pcdi)
                     else:
-                        await interaction.response.send_message(f"You recorded your hit with: \n {tc}")
+                        await interaction.response.send_message(f"You recorded your hit with: {tc.name}")
             else:
                 await interaction.response.send_message(f"Today is not cb day")
         except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDays, TableEntryDoesntExistsError) as e:
@@ -251,10 +259,10 @@ def run_discord_bot():
                 pcdi.overflow = False
                 pcdi.ovf_time = ''
                 pcdi = await service.update_pcdi(pcdi)
-                await interaction.response.send_message(f"You have used your ovf: \n{pcdi}")
+                await interaction.response.send_message(f"You have used your ovf")
             else:
                 await interaction.response.send_message(f"Today is not cb day")
-        except ValueError as e:
+        except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDays, TableEntryDoesntExistsError) as e:
             return await interaction.response.send_message(e)
 
     @client.tree.command(name="ovf kill", description="Kill boss with ovf and removes ovf from your profile")
@@ -276,7 +284,51 @@ def run_discord_bot():
                 await update_lap_and_tier(interaction, cb, pcdi)
             else:
                 await interaction.response.send_message(f"Today is not cb day")
-        except ValueError as e:
+        except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDays, TableEntryDoesntExistsError) as e:
+            return await interaction.response.send_message(e)
+
+    async def get_page_html(link):
+        headers = {'User-Agent': user_agent.random}
+        async with aiohttp.ClientSession() as session:
+            async with session.get(link, headers=headers) as response:
+                html = ''
+                if re.search('text/html', response.headers['Content-Type']):
+                    html = await response.text()
+                return html
+
+    async def scrape_clan_rankings(name):
+        url = 'https://mofumofu.live/cb/current'
+        html = await get_page_html(url)
+        clan_name = name.lower()
+        soup = BeautifulSoup(html, 'lxml')
+
+        htnm_migration_table = soup.find("table")
+        tbody = htnm_migration_table.find('tbody')
+        trs = tbody.find_all('tr')
+        for tr in trs:
+            th = tr.find('th')
+            td_list = tr.find_all('td')
+            clan_name_found = ' '.join(td_list[1].text.split()).lower()
+            ranking = ' '.join(th.text.split())
+            if clan_name_found == clan_name:
+                #           RANKING                         CLAN NAME
+                return ranking
+
+    @client.tree.command(name="ovf hit", description="Removes ovf from your profile")
+    async def check(interaction: discord.Interaction):
+        """ Check status of the clan """
+        try:
+            clan = await service.get_clan_by_guild(interaction.guild_id)
+            cb = await service.get_clan_battle_active_by_clan_id(clan.clan_id)
+            cb_day = get_cb_day(cb)
+            hits_left = await service.get_today_hits_left(cb_day, cb.cb_id)
+            ranking = await scrape_clan_rankings(clan.name)
+            boss = await service.get_active_boss_by_cb_id(cb.cb_id)
+            await interaction.response.send_message(f"Hits left: {hits_left}/90\n"
+                                                    f"Current lap: {cb.lap}\n"
+                                                    f"Current boss: {boss.name}\n"
+                                                    f"Clan ranking: {ranking}")
+        except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDays, TableEntryDoesntExistsError) as e:
             return await interaction.response.send_message(e)
 
     @hit.error
