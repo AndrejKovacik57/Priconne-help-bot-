@@ -397,13 +397,16 @@ def run_discord_bot():
             clan = await service.get_clan_by_guild(interaction.guild_id)
             cb = await service.get_clan_battle_active_by_clan_id(clan.clan_id)
             cb_day = get_cb_day(cb)
-            hits_left = await service.get_today_hits_left(cb_day, cb.cb_id)
-            ranking = await scrape_clan_rankings(clan.name)
-            boss = await service.get_active_boss_by_cb_id(cb.cb_id)
-            await interaction.response.send_message(f"Hits left: {hits_left}/90\n"
-                                                    f"Current lap: {cb.lap}\n"
-                                                    f"Current boss: {boss.name}\n"
-                                                    f"Clan ranking: {ranking}")
+            if cb_day:
+                hits_left = await service.get_today_hits_left(cb_day, cb.cb_id)
+                ranking = await scrape_clan_rankings(clan.name)
+                boss = await service.get_active_boss_by_cb_id(cb.cb_id)
+                await interaction.response.send_message(f"Hits left: {hits_left}/90\n"
+                                                        f"Current lap: {cb.lap}\n"
+                                                        f"Current boss: {boss.name}\n"
+                                                        f"Clan ranking: {ranking}")
+            else:
+                await interaction.response.send_message(f"Today is not cb day")
         except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDaysError, TableEntryDoesntExistsError) as e:
             return await interaction.response.send_message(e)
 
@@ -419,16 +422,19 @@ def run_discord_bot():
             player = await service.get_player_by_discord_id(interaction.user.id)
             cb = await service.get_clan_battle_active_by_clan_id(clan.clan_id)
             cb_day = get_cb_day(cb)
-            pcdi = await service.get_pcdi_by_player_id_and_cb_id_and_day(player.player_id, cb.cb_id, cb_day)
-            has_ovf = 'yes' if pcdi.overflow else 'no'
-            ovf_time = f'Ovf time: {pcdi.ovf_time}\n' if pcdi.overflow else ''
-            ovf_comp = f'Ovf comp: {pcdi.ovf_comp}\n' if pcdi.overflow else ''
+            if cb_day:
+                pcdi = await service.get_pcdi_by_player_id_and_cb_id_and_day(player.player_id, cb.cb_id, cb_day)
+                has_ovf = 'yes' if pcdi.overflow else 'no'
+                ovf_time = f'Ovf time: {pcdi.ovf_time}\n' if pcdi.overflow else ''
+                ovf_comp = f'Ovf comp: {pcdi.ovf_comp}\n' if pcdi.overflow else ''
 
-            await interaction.response.send_message(f"Hits left: {pcdi.hits}/3\n"
-                                                    f"Reset: {pcdi.reset}\n"
-                                                    f"Ovf: {has_ovf}\n"
-                                                    f"{ovf_time}"
-                                                    f"{ovf_comp}")
+                await interaction.response.send_message(f"Hits left: {pcdi.hits}/3\n"
+                                                        f"Reset: {pcdi.reset}\n"
+                                                        f"Ovf: {has_ovf}\n"
+                                                        f"{ovf_time}"
+                                                        f"{ovf_comp}")
+            else:
+                await interaction.response.send_message(f"Today is not cb day")
         except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDaysError, TableEntryDoesntExistsError) as e:
             return await interaction.response.send_message(e)
 
@@ -442,13 +448,16 @@ def run_discord_bot():
             clan = await service.get_clan_by_guild(interaction.guild_id)
             cb = await service.get_clan_battle_active_by_clan_id(clan.clan_id)
             cb_day = get_cb_day(cb)
-            pcdi_player_tup = await service.get_all_pcdi_ovf_by_cb_id(cb.cb_id, True, cb_day)
-            message_string = ''
-            for i in range(len(pcdi_player_tup)):
-                pcdi = pcdi_player_tup[i][0]
-                player = pcdi_player_tup[i][1]
-                message_string += f'Player: {player.name} ovf comp is {pcdi.ovf_comp} and ovf time: {pcdi.ovf_time}\n'
-            await interaction.response.send_message(message_string)
+            if cb_day:
+                pcdi_player_tup = await service.get_all_pcdi_ovf_by_cb_id(cb.cb_id, True, cb_day)
+                message_string = ''
+                for i in range(len(pcdi_player_tup)):
+                    pcdi = pcdi_player_tup[i][0]
+                    player = pcdi_player_tup[i][1]
+                    message_string += f'Player: {player.name} ovf comp is {pcdi.ovf_comp} and ovf time: {pcdi.ovf_time}\n'
+                await interaction.response.send_message(message_string)
+            else:
+                await interaction.response.send_message(f"Today is not cb day")
         except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDaysError, TableEntryDoesntExistsError) as e:
             return await interaction.response.send_message(e)
 
