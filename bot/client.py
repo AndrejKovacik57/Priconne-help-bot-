@@ -52,11 +52,9 @@ def run_discord_bot():
         # except Exception as e:
         #     print(e)
 
-
     ### HELPER FUNCTIONS ###
 
-
-    async def get_cb_day(cb):
+    def get_cb_day(cb):
         utc = pytz.UTC  # Create a UTC timezone object
         current_time_object = datetime.now(tz=utc).date()
         start_date_object = datetime.strptime(cb.start_date, "%d-%m-%Y").date()
