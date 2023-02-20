@@ -53,7 +53,49 @@ def run_discord_bot():
         #     print(e)
 
 
-    ### HELPER FUNCTIONS ###
+    ### TESTING / MISC COMMANDS ###
+
+    @client.tree.command(name="hello")
+    async def hello(interaction: discord.Interaction):
+        await interaction.response.send_message(f"Hi fellow cosplayer {interaction.user.mention}! Your Discord ID is {interaction.user.id}. I'm Marin", ephemeral=False)
+
+
+    @client.tree.command(name="help")
+    async def help(interaction: discord.Interaction):
+        embed = discord.Embed(title="Marin Bot Commands", color=0x3083e3,
+            description="""
+                Hi fellow **Cosplayer**! I'm a CB bot, designed to make your CB life easier!
+
+                **help**: Shows list of commands.
+                **invite**: Bot invite link *(WIP)*.
+            """)
+        # embed.set_author(name="MangaUpdates", icon_url=self.bot.user.avatar.url)
+        # embed.set_author(name="Marin")
+        embed.add_field(name="__Create__",
+            value="""
+                **create clan `clan`**: Create clan called `clan`.
+                **create player `player`**: Create player called `player`.
+            """, inline=False)
+        embed.add_field(name="__Clan__",
+            value="""
+                **clan check**: Check info regarding own clan.
+                **clan list**:  Get list of clans.
+                **clan updatename `clan` `newname`**: Change name of `clan` to `newname`.
+                **clan playerlist**: Check list of players in clan.
+                **clan addplayer `player` `clan`**: Add `player` to `clan`.
+                **clan removeplayer `player` `clan`**: Remove `player` from `clan`.
+            """, inline=False)
+        embed.add_field(name="__Player__",
+            value="""
+                **player delete `player`**: Delete `player`.
+                **player selfcheck**: Check info regarding self.
+                **player check `player`**: Check info regarding `player`.
+            """, inline=False)
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    ### ADMIN COMMANDS ###
+
+    ### LEAD ONLY Commands ###
 
 
     async def get_cb_day(cb):
