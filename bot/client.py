@@ -44,6 +44,7 @@ def run_discord_bot():
         await client.load_extension("bot.clan-commands")
         await client.load_extension("bot.create-commands")
         await client.load_extension("bot.player-commands")
+        await client.load_extension("bot.server-commands")
         # try:
         #     # Don't do this. Should move elsewhere after testing is done
         #     synced = await client.tree.sync()
@@ -52,88 +53,10 @@ def run_discord_bot():
         #     print(e)
 
 
-    ### TESTING / MISC COMMANDS ###
+    ### HELPER FUNCTIONS ###
 
-    @client.tree.command(name="hello")
-    async def hello(interaction: discord.Interaction):
-        await interaction.response.send_message(f"Hi fellow cosplayer {interaction.user.mention}! Your Discord ID is {interaction.user.id}. I'm Marin", ephemeral=False)
 
-    
-    @client.tree.command(name="help")
-    async def help(interaction: discord.Interaction):
-        embed = discord.Embed(title="Marin Bot Commands", color=0x3083e3,
-            description="""
-                Hi fellow **Cosplayer**! I'm a CB bot, designed to make your CB life easier!
-
-                **help**: Shows list of commands.
-                **invite**: Bot invite link *(WIP)*.
-            """)
-        # embed.set_author(name="MangaUpdates", icon_url=self.bot.user.avatar.url)
-        # embed.set_author(name="Marin")
-        embed.add_field(name="__Create__", 
-            value="""
-                **create clan `clan`**: Create clan called `clan`.
-                **create player `player`**: Create player called `player`.
-            """, inline=False)
-        embed.add_field(name="__Clan__",
-            value="""
-                **clan check**: Check info regarding own clan.
-                **clan list**:  Get list of clans.
-                **clan updatename `clan` `newname`**: Change name of `clan` to `newname`.
-                **clan playerlist**: Check list of players in clan.
-                **clan addplayer `player` `clan`**: Add `player` to `clan`.
-                **clan removeplayer `player` `clan`**: Remove `player` from `clan`.
-            """, inline=False)
-        embed.add_field(name="__Player__",
-            value="""
-                **player delete `player`**: Delete `player`.
-                **player selfcheck**: Check info regarding self.
-                **player check `player`**: Check info regarding `player`.
-            """, inline=False)
-        await interaction.response.send_message(embed=embed, ephemeral=True)
-
-    ### ADMIN COMMANDS ###
-
-    ### LEAD ONLY Commands ###
-
-    @client.tree.command(name="startclanbattle", description="Start clan battle on given date")
-    @app_commands.describe(date = "Start date of CB")
-    async def startclanbattle(interaction: discord.Interaction, date: str):
-        """ Start clan battle on given date """
-        try:
-            # service.create_clan_battle() Re-do parameters
-            await interaction.response.send_message(f"Starting clan battle on {date}")
-        except:
-            return ""
-
-    ### GENERAL COMMANDS ###
-
-    @client.tree.command(name="bossavailability", description="Displays hit bookings on all bosses")
-    async def bossavailability(interaction: discord.Interaction):
-        """ Check info regarding boss availability """
-        try:
-            await interaction.response.send_message(f"__**Overflow Count: \_\_\_**__\nBoss 1: \_\_ hits booked\nBoss 2: \_\_ hits booked\nBoss 3: \_\_ hits booked\nBoss 4: \_\_ hits booked\nBoss 5: \_\_ hits booked")
-        except:
-            return ""
-
-    @client.tree.command(name="ovf", description="Overflows currently in clan")
-    async def ovf(interaction: discord.Interaction):
-        """ Check info regarding overflows existing in clan """
-        try:
-            await interaction.response.send_message(f"__**Overflow Count: \_\_\_**__\nPlayer: \_\_\_\_\nBoss: \_\_\_\nTime: \_\_:\_\_\nEstimated Damage: \_\_\_\_")
-        except:
-            return ""
-
-    @client.tree.command(name="bookhit", description="Book a hit on this boss")
-    @app_commands.describe(boss="Boss", expecteddamage="Expected damage")
-    async def bookhit(interaction: discord.Interaction, boss: str, expecteddamage: str):
-        """ Book a hit on boss """
-        try:
-            await interaction.response.send_message(f"Booked hit on boss: {boss}\nWith expected damage: {expecteddamage}")
-        except:
-            return ""
-
-    def get_cb_day(cb):
+    async def get_cb_day(cb):
         utc = pytz.UTC  # Create a UTC timezone object
         current_time_object = datetime.now(tz=utc).date()
         start_date_object = datetime.strptime(cb.start_date, "%d-%m-%Y").date()
@@ -189,8 +112,9 @@ def run_discord_bot():
             boss.active = True
             boss = await service.update_boss(boss)
 
-        await interaction.response.send_message(f"You recorded your hit and killed the {boss_killed_name}."
-                                                f"\nActive boss:{boss.name}")
+        await interaction.response.send_message(
+            f"You recorded your hit and killed the {boss_killed_name}."
+            f"\nActive boss:{boss.name}")
 
     async def hit_kill(interaction: discord.Interaction, tc_name: str, ovf_time=''):
         """ help function for hit and kill functions """
@@ -232,63 +156,7 @@ def run_discord_bot():
                 await interaction.response.send_message(f"Today is not cb day")
         except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDays, TableEntryDoesntExistsError) as e:
             return await interaction.response.send_message(e)
-
-    @client.tree.command(name="hit", description="Register hit")
-    @app_commands.describe(tc_name="Name of team composition")
-    async def hit(interaction: discord.Interaction, tc_name: str):
-        """ Record hit on boss """
-        await hit_kill(interaction, tc_name)
-
-    @client.tree.command(name="kill", description="Record hit and killing of the boss")
-    @app_commands.describe(tc_name="Team composition name", ovf_time="Ovf time")
-    async def kill(interaction: discord.Interaction, tc_name: str, ovf_time: str):
-        """ Record hit on boss and moves to another (updates lap and tier if needed)"""
-        await hit_kill(interaction, tc_name, ovf_time=ovf_time)
-
-    @client.tree.command(name="ovf hit", description="Removes ovf from your profile")
-    async def ovf_hit(interaction: discord.Interaction):
-        """ Record ovf """
-        try:
-            player = await service.get_player_by_discord_id(interaction.user.id)
-            clan = await service.get_clan_by_guild(interaction.guild_id)
-            cb = await service.get_clan_battle_active_by_clan_id(clan.clan_id)
-
-            day_of_cb = get_cb_day(cb)
-
-            if day_of_cb:
-                pcdi = await service.get_pcdi_by_player_id_and_cb_id_and_day(player.player_id, cb.cb_id, day_of_cb)
-                pcdi.overflow = False
-                pcdi.ovf_time = ''
-                pcdi.ovf_comp = ''
-                pcdi = await service.update_pcdi(pcdi)
-                await interaction.response.send_message(f"You have used your ovf")
-            else:
-                await interaction.response.send_message(f"Today is not cb day")
-        except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDays, TableEntryDoesntExistsError) as e:
-            return await interaction.response.send_message(e)
-
-    @client.tree.command(name="ovf kill", description="Kill boss with ovf and removes ovf from your profile")
-    async def ovf_kill(interaction: discord.Interaction):
-        """  Record ovf and moves to another (updates lap and tier if needed)"""
-        try:
-            player = await service.get_player_by_discord_id(interaction.user.id)
-            clan = await service.get_clan_by_guild(interaction.guild_id)
-            cb = await service.get_clan_battle_active_by_clan_id(clan.clan_id)
-
-            day_of_cb = get_cb_day(cb)
-
-            if day_of_cb:
-                pcdi = await service.get_pcdi_by_player_id_and_cb_id_and_day(player.player_id, cb.cb_id, day_of_cb)
-                pcdi.overflow = False
-                pcdi.ovf_time = ''
-                pcdi.ovf_comp = ''
-                pcdi = await service.update_pcdi(pcdi)
-
-                await update_lap_and_tier(interaction, cb, pcdi)
-            else:
-                await interaction.response.send_message(f"Today is not cb day")
-        except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDays, TableEntryDoesntExistsError) as e:
-            return await interaction.response.send_message(e)
+    
 
     async def get_page_html(link):
         headers = {'User-Agent': user_agent.random}
@@ -317,27 +185,237 @@ def run_discord_bot():
                 #           RANKING                         CLAN NAME
                 return ranking
 
+
+    ### TESTING / MISC COMMANDS ###
+
+    @client.tree.command(name="hello")
+    async def hello(interaction: discord.Interaction):
+        # temp = interaction.user.roles
+        # temp3 = []
+        # for item in temp:
+        #     temp3.append(item.id)
+        #     # print(item.id)
+        # user_roles = interaction.user.roles
+        # guild_admins = await service.get_guild_admin(interaction.guild.id)
+        # await interaction.response.send_message(temp3)
+        # await interaction.response.send_message(temp[4].id)
+        # temp2 = await service.get_guild_roles(interaction.guild.id)
+        # await interaction.response.send_message(temp2[0])
+        await interaction.response.send_message(f"Hi fellow cosplayer {interaction.user.mention}! Your Discord ID is {interaction.user.id}. I'm Marin", ephemeral=False)
+
+    
+    @client.tree.command(name="help")
+    async def help(interaction: discord.Interaction):
+        embed = discord.Embed(title="Marin Bot Commands", color=0x3083e3,
+            description="""
+                Hi fellow **Cosplayer**! I'm a CB bot, designed to make your CB life easier!
+
+                **help**: Shows list of commands.
+                **invite**: Bot invite link *(WIP)*.
+            """)
+        # embed.set_author(name="MangaUpdates", icon_url=self.bot.user.avatar.url)
+        # embed.set_author(name="Marin")
+        embed.add_field(name="__Create__", 
+            value="""
+                **create clan `clan`**: Create clan called `clan`.
+                **create player `player`**: Create player called `player`.
+            """, inline=False)
+        embed.add_field(name="__Clan__",
+            value="""
+                **clan check**: Check info regarding own clan.
+                **clan list**:  Get list of clans.
+                **clan updatename `clan` `newname`**: Change name of `clan` to `newname`.
+                **clan playerlist**: Check list of players in clan.
+                **clan addplayer `player` `clan`**: Add `player` to `clan`.
+                **clan removeplayer `player` `clan`**: Remove `player` from `clan`.
+            """, inline=False)
+        embed.add_field(name="__Player__",
+            value="""
+                **player delete `player`**: Delete `player`.
+                **player selfcheck**: Check info regarding self.
+                **player check `player`**: Check info regarding `player`.
+            """, inline=False)
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+
+    ### LEAD ONLY Commands ###
+
+
+    @client.tree.command(name="startclanbattle", description="Start clan battle on given date")
+    @app_commands.describe(date = "Start date of CB")
+    async def startclanbattle(interaction: discord.Interaction, date: str):
+        """ Start clan battle on given date """
+        try:
+            guild = await service.get_guild_by_id(interaction.guild.id)
+            if not guild:
+                raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
+            # service.create_clan_battle() Re-do parameters
+            await interaction.response.send_message(f"Starting clan battle on {date}")
+        except:
+            return ""
+
+
+    ### GENERAL COMMANDS ###
+
+
+    @client.tree.command(name="bossavailability", description="Displays hit bookings on all bosses")
+    async def bossavailability(interaction: discord.Interaction):
+        """ Check info regarding boss availability """
+        try:
+            guild = await service.get_guild_by_id(interaction.guild.id)
+            if not guild:
+                raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
+            await interaction.response.send_message(
+                f"__**Overflow Count: \_\_\_**__"
+                f"\nBoss 1: \_\_ hits booked"
+                f"\nBoss 2: \_\_ hits booked"
+                f"\nBoss 3: \_\_ hits booked"
+                f"\nBoss 4: \_\_ hits booked"
+                f"\nBoss 5: \_\_ hits booked")
+        except:
+            return ""
+
+
+    @client.tree.command(name="ovf", description="Overflows currently in clan")
+    async def ovf(interaction: discord.Interaction):
+        """ Check info regarding overflows existing in clan """
+        try:
+            guild = await service.get_guild_by_id(interaction.guild.id)
+            if not guild:
+                raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
+            await interaction.response.send_message(
+                f"__**Overflow Count: \_\_\_**__"
+                f"\nPlayer: \_\_\_\_"
+                f"\nBoss: \_\_\_"
+                f"\nTime: \_\_:\_\_"
+                f"\nEstimated Damage: \_\_\_\_")
+        except:
+            return ""
+
+
+    @client.tree.command(name="bookhit", description="Book a hit on this boss")
+    @app_commands.describe(boss="Boss", expecteddamage="Expected damage")
+    async def bookhit(interaction: discord.Interaction, boss: str, expecteddamage: str):
+        """ Book a hit on boss """
+        try:
+            guild = await service.get_guild_by_id(interaction.guild.id)
+            if not guild:
+                raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
+            await interaction.response.send_message(
+                f"Booked hit on boss: {boss}"
+                f"\nWith expected damage: {expecteddamage}")
+        except:
+            return ""
+
+
+    @client.tree.command(name="hit", description="Register hit")
+    @app_commands.describe(tc_name="Name of team composition")
+    async def hit(interaction: discord.Interaction, tc_name: str):
+        """ Record hit on boss """
+        try:
+            guild = await service.get_guild_by_id(interaction.guild.id)
+            if not guild:
+                raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
+            await hit_kill(interaction, tc_name)
+        except TableEntryDoesntExistsError as e:
+            await interaction.response.send_message(e)
+
+
+    @client.tree.command(name="kill", description="Record hit and killing of the boss")
+    @app_commands.describe(tc_name="Team composition name", ovf_time="Ovf time")
+    async def kill(interaction: discord.Interaction, tc_name: str, ovf_time: str):
+        """ Record hit on boss and moves to another (updates lap and tier if needed)"""
+        try:
+            guild = await service.get_guild_by_id(interaction.guild.id)
+            if not guild:
+                raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
+            await hit_kill(interaction, tc_name, ovf_time=ovf_time)
+        except TableEntryDoesntExistsError as e:
+            await interaction.response.send_message(e)
+
+
+    @client.tree.command(name="ovfhit", description="Removes ovf from your profile")
+    async def ovf_hit(interaction: discord.Interaction):
+        """ Record ovf """
+        try:
+            guild = await service.get_guild_by_id(interaction.guild.id)
+            if not guild:
+                raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
+            player = await service.get_player_by_discord_id(interaction.user.id)
+            clan = await service.get_clan_by_guild(interaction.guild_id)
+            cb = await service.get_clan_battle_active_by_clan_id(clan.clan_id)
+
+            day_of_cb = get_cb_day(cb)
+
+            if day_of_cb:
+                pcdi = await service.get_pcdi_by_player_id_and_cb_id_and_day(player.player_id, cb.cb_id, day_of_cb)
+                pcdi.overflow = False
+                pcdi.ovf_time = ''
+                pcdi.ovf_comp = ''
+                pcdi = await service.update_pcdi(pcdi)
+                await interaction.response.send_message(f"You have used your ovf")
+            else:
+                await interaction.response.send_message(f"Today is not cb day")
+        except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDays, TableEntryDoesntExistsError) as e:
+            return await interaction.response.send_message(e)
+
+
+    @client.tree.command(name="ovfkill", description="Kill boss with ovf and removes ovf from your profile")
+    async def ovf_kill(interaction: discord.Interaction):
+        """  Record ovf and moves to another (updates lap and tier if needed)"""
+        try:
+            guild = await service.get_guild_by_id(interaction.guild.id)
+            if not guild:
+                raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
+            player = await service.get_player_by_discord_id(interaction.user.id)
+            clan = await service.get_clan_by_guild(interaction.guild_id)
+            cb = await service.get_clan_battle_active_by_clan_id(clan.clan_id)
+
+            day_of_cb = get_cb_day(cb)
+
+            if day_of_cb:
+                pcdi = await service.get_pcdi_by_player_id_and_cb_id_and_day(player.player_id, cb.cb_id, day_of_cb)
+                pcdi.overflow = False
+                pcdi.ovf_time = ''
+                pcdi.ovf_comp = ''
+                pcdi = await service.update_pcdi(pcdi)
+
+                await update_lap_and_tier(interaction, cb, pcdi)
+            else:
+                await interaction.response.send_message(f"Today is not cb day")
+        except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDays, TableEntryDoesntExistsError) as e:
+            return await interaction.response.send_message(e)
+    
+
     @client.tree.command(name="check", description="Checks status of clan")
     async def check(interaction: discord.Interaction):
         """ Check status of the clan """
         try:
+            guild = await service.get_guild_by_id(interaction.guild.id)
+            if not guild:
+                raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
             clan = await service.get_clan_by_guild(interaction.guild_id)
             cb = await service.get_clan_battle_active_by_clan_id(clan.clan_id)
             cb_day = get_cb_day(cb)
             hits_left = await service.get_today_hits_left(cb_day, cb.cb_id)
             ranking = await scrape_clan_rankings(clan.name)
             boss = await service.get_active_boss_by_cb_id(cb.cb_id)
-            await interaction.response.send_message(f"Hits left: {hits_left}/90\n"
-                                                    f"Current lap: {cb.lap}\n"
-                                                    f"Current boss: {boss.name}\n"
-                                                    f"Clan ranking: {ranking}")
+            await interaction.response.send_message(
+                f"Hits left: {hits_left}/90\n"
+                f"Current lap: {cb.lap}\n"
+                f"Current boss: {boss.name}\n"
+                f"Clan ranking: {ranking}")
         except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDays, TableEntryDoesntExistsError) as e:
             return await interaction.response.send_message(e)
 
-    @client.tree.command(name="self check", description="Checks status of yourself")
+
+    @client.tree.command(name="selfcheck", description="Checks status of yourself")
     async def self_check(interaction: discord.Interaction):
         """ Check status of yourself """
         try:
+            guild = await service.get_guild_by_id(interaction.guild.id)
+            if not guild:
+                raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
             clan = await service.get_clan_by_guild(interaction.guild_id)
             player = await service.get_player_by_discord_id(interaction.user.id)
             cb = await service.get_clan_battle_active_by_clan_id(clan.clan_id)
@@ -347,18 +425,22 @@ def run_discord_bot():
             ovf_time = f'Ovf time: {pcdi.ovf_time}\n' if pcdi.overflow else ''
             ovf_comp = f'Ovf comp: {pcdi.ovf_comp}\n' if pcdi.overflow else ''
 
-            await interaction.response.send_message(f"Hits left: {pcdi.hits}/3\n"
-                                                    f"Reset: {pcdi.reset}\n"
-                                                    f"Ovf: {has_ovf}\n"
-                                                    f"{ovf_time}"
-                                                    f"{ovf_comp}")
+            await interaction.response.send_message(
+                f"Hits left: {pcdi.hits}/3\n"
+                f"Reset: {pcdi.reset}\n"
+                f"Ovf: {has_ovf}\n"
+                f"{ovf_time}"
+                f"{ovf_comp}")
         except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDays, TableEntryDoesntExistsError) as e:
             return await interaction.response.send_message(e)
 
-    @client.tree.command(name="get overflows", description="Gets all available overflows in clan")
+    @client.tree.command(name="getoverflows", description="Gets all available overflows in clan")
     async def get_ovf_players(interaction: discord.Interaction):
         """ Get players with ovf """
         try:
+            guild = await service.get_guild_by_id(interaction.guild.id)
+            if not guild:
+                raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
             clan = await service.get_clan_by_guild(interaction.guild_id)
             cb = await service.get_clan_battle_active_by_clan_id(clan.clan_id)
             cb_day = get_cb_day(cb)

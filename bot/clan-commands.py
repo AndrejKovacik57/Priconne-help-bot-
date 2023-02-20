@@ -18,7 +18,10 @@ class ClanGroup(app_commands.Group):
         try:
             # service.get_clan_battles_in_clan("Automatically fetched clan_id / clan_name")
             await interaction.response.send_message(
-                f"__**Info for clan: \_\_\_**__\nPosition: \_\_\_\nLap: \_\_\_\nTier: (A/B/C/D)\nBoss: \_\_\_\nHits Remaining: \_\_\_")
+                f"__**Info for clan: \_\_\_**__"
+                f"\nPosition: \_\_\_\nLap: \_\_\_"
+                f"\nTier: (A/B/C/D)\nBoss: \_\_\_"
+                f"\nHits Remaining: \_\_\_")
         except:
             return ""
 
@@ -27,7 +30,9 @@ class ClanGroup(app_commands.Group):
         """ List of clans """
         try:
             clan_list = await service.get_clans()
-            await interaction.response.send_message(f"List of clans\n{clan_list}")
+            await interaction.response.send_message(
+                f"List of clans"
+                f"\n{clan_list}")
         except:
             await interaction.response.send_message(f"Error in command. Please try again in a few moments")
 

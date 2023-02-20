@@ -11,6 +11,24 @@ class Clan:
                 f"name: {self.name}\n")
 
 
+class Guild:
+    def __init__(self, guild_id):
+        self.guild_id = guild_id
+
+    def __str__(self):
+        return (f"guild_id: {self.guild_id}\n")
+
+
+class GuildRole:
+    def __init__(self, guild_id, role_id):
+        self.guild_id = guild_id
+        self.role_id = role_id
+
+    def __str__(self):
+        return (f"guild_id: {self.guild_id}\n"
+                f"role_id: {self.role_id}\n")
+
+
 class Player:
     def __init__(self, player_id, name, discord_id,):
         self.player_id = player_id
