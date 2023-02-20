@@ -5,7 +5,7 @@ from exceptions.exceptions import ParameterIsNullError, ObjectExistsInDBError, T
     DesiredBossIsDeadError
 from db_model.table_classes import Clan, Player, ClanPlayer, ClanBattle, PlayerCBDayInfo, TeamComposition, Boss, \
     BossBooking, \
-    ClanRole
+    ClanRole, Guild, GuildRole
 from datetime import datetime, timedelta
 
 
@@ -13,23 +13,170 @@ class Service:
     def __init__(self, db_name: str):
         self.db = f'{db_name}.db'
 
-    async def create_clan(self, clan_name: str, guild: int) -> Clan:
-        """ Insert a new Clan into the Clan table. """
-        if not clan_name:
-            raise ParameterIsNullError("Clan name cant be empty")
+    async def add_server(self, guild_id: int) :
+        """ Insert a new server into the Guild table. """
+        if not guild_id:
+            raise ParameterIsNullError("Guild id can't be empty!")
         async with aiosqlite.connect(self.db) as conn:
             cur = await conn.cursor()
 
-            await cur.execute(""" SELECT * FROM Clan WHERE name=:name and guild=:guild""",
-                              {'name': clan_name, 'guild': guild})
+            await cur.execute(""" SELECT * FROM Guild WHERE id=:id""",
+                              { 'id': guild_id })
             result = await cur.fetchone()
 
             if result:
-                raise ObjectExistsInDBError(result)
+                raise ObjectExistsInDBError("Your server is already setup!")
 
-            await cur.execute(""" INSERT INTO Clan(name, guild) VALUES (:name,:guild) """,
-                              {'name': clan_name, 'guild': guild})
-            clan = Clan(cur.lastrowid, guild, clan_name)
+            await cur.execute(""" INSERT INTO Guild(id) VALUES (:id) """,
+                              { 'id': guild_id })
+
+            await conn.commit()
+
+        return True
+
+    async def get_guild_by_id(self, guild_id: int) -> Guild or None:
+        """ Gets Clan by Id """
+        if not guild_id:
+            raise ParameterIsNullError("Guild id cant be empty")
+
+        async with aiosqlite.connect(self.db) as conn:
+            cur = await conn.cursor()
+
+            await cur.execute(""" SELECT * FROM Guild WHERE id=:id """, {'id': guild_id})
+            result = await cur.fetchone()
+            
+        if not result:
+            return None
+            # raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
+
+        return Guild(result[0])
+
+    async def add_admin_role(self, guild_id: int, role_id: int) :
+        """ Insert a new admin role into the GuildAdmin table. """
+        if not guild_id:
+            raise ParameterIsNullError("Guild id can't be empty!")
+        guild = await self.get_guild_by_id(guild_id)
+        if not guild:
+            raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
+
+        if not role_id:
+            raise ParameterIsNullError("Role id can't be empty!")
+        async with aiosqlite.connect(self.db) as conn:
+            cur = await conn.cursor()
+
+            await cur.execute(""" SELECT * FROM GuildAdmin WHERE role_id=:role_id and guild_id=:guild_id """,
+                              { 'role_id': role_id, 'guild_id': guild_id})
+            result = await cur.fetchone()
+
+            if result:
+                raise ObjectExistsInDBError("Role is already setup!")
+
+            await cur.execute(""" INSERT INTO GuildAdmin(role_id, guild_id) VALUES (:role_id, :guild_id) """,
+                              { 'role_id': role_id, 'guild_id': guild_id})
+            
+            guild_role = GuildRole(guild_id, role_id)
+
+            await conn.commit()
+
+        return guild_role
+    
+    async def add_lead_role(self, guild_id: int, role_id: int) :
+        """ Insert a new lead role into the GuildLead table. """
+        if not guild_id:
+            raise ParameterIsNullError("Guild id can't be empty!")
+        guild = await self.get_guild_by_id(guild_id)
+        if not guild:
+            raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
+
+        if not role_id:
+            raise ParameterIsNullError("Role id can't be empty!")
+        async with aiosqlite.connect(self.db) as conn:
+            cur = await conn.cursor()
+
+            await cur.execute(""" SELECT * FROM GuildLead WHERE role_id=:role_id and guild_id=:guild_id """,
+                              { 'role_id': role_id, 'guild_id': guild_id})
+            result = await cur.fetchone()
+
+            if result:
+                raise ObjectExistsInDBError("Role is already setup!")
+
+            await cur.execute(""" INSERT INTO GuildLead(role_id, guild_id) VALUES (:role_id, :guild_id) """,
+                              { 'role_id': role_id, 'guild_id': guild_id})
+            
+            guild_role = GuildRole(guild_id, role_id)
+
+            await conn.commit()
+
+        return guild_role
+    
+    async def get_guild_admin(self, guild_id: int) -> GuildRole:
+        """ Gets admin roles for server """
+        if not guild_id:
+            raise ParameterIsNullError("Guild id can't be empty!")
+        guild = await self.get_guild_by_id(guild_id)
+        if not guild:
+            raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
+
+        async with aiosqlite.connect(self.db) as conn:
+            cur = await conn.cursor()
+
+            await cur.execute(""" SELECT * FROM GuildAdmin WHERE guild_id=:guild_id """, {'guild_id': guild_id})
+            results = await cur.fetchall()
+
+        if not results:
+            raise TableEntryDoesntExistsError("There are no roles set up for your server! Please run **/server addadminrole** and/or **/server addadminrole**")
+        
+        guild_role_array = []
+        for index, tuple in enumerate(results):
+            guild_role_array.append(results[index])
+
+        return guild_role_array
+    
+    async def get_guild_lead(self, guild_id: int) -> GuildRole:
+        """ Gets lead roles for server """
+        if not guild_id:
+            raise ParameterIsNullError("Guild id can't be empty!")
+        guild = await self.get_guild_by_id(guild_id)
+        if not guild:
+            raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
+
+        async with aiosqlite.connect(self.db) as conn:
+            cur = await conn.cursor()
+
+            await cur.execute(""" SELECT * FROM GuildLead WHERE guild_id=:guild_id """, {'guild_id': guild_id})
+            results = await cur.fetchall()
+
+        if not results:
+            raise TableEntryDoesntExistsError("There are no roles set up for your server! Please run **/server addadminrole** and/or **/server addleadrole**")
+        
+        guild_role_array = []
+        for index, tuple in enumerate(results):
+            guild_role_array.append(results[index])
+
+        return guild_role_array
+
+    async def create_clan(self, clan_name: str, guild_id: int) -> Clan:
+        """ Insert a new Clan into the Clan table. """
+        if not clan_name:
+            raise ParameterIsNullError("Clan name cant be empty")
+        if not guild_id:
+            raise ParameterIsNullError("Guild id can't be empty!")
+        guild = await self.get_guild_by_id(guild_id)
+        if not guild:
+            raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
+        async with aiosqlite.connect(self.db) as conn:
+            cur = await conn.cursor()
+
+            await cur.execute(""" SELECT * FROM Clan WHERE name=:name and guild_id=:guild_id""",
+                              {'name': clan_name, 'guild_id': guild_id})
+            result = await cur.fetchone()
+
+            if result:
+                raise ObjectExistsInDBError("Clan already exists!")
+
+            await cur.execute(""" INSERT INTO Clan(name, guild_id) VALUES (:name,:guild_id) """,
+                              {'name': clan_name, 'guild_id': guild_id})
+            clan = Clan(cur.lastrowid, guild_id, clan_name)
 
             await conn.commit()
 

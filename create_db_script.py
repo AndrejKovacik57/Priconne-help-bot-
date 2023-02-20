@@ -3,7 +3,12 @@ import sqlite3
 conn = sqlite3.connect('priconne_database.db')
 cur = conn.cursor()
 
+cur.execute("""DROP TABLE IF EXISTS Guild""")
+# cur.execute("""DROP TABLE IF EXISTS GuildRole""")
+cur.execute("""DROP TABLE IF EXISTS GuildAdmin""")
+cur.execute("""DROP TABLE IF EXISTS Guildlead""")
 cur.execute("""DROP TABLE IF EXISTS Clan""")
+cur.execute("""DROP TABLE IF EXISTS Role""")
 cur.execute("""DROP TABLE IF EXISTS ClanRole""")
 cur.execute("""DROP TABLE IF EXISTS Player""")
 cur.execute("""DROP TABLE IF EXISTS ClanPlayer""")
@@ -15,7 +20,40 @@ cur.execute("""DROP TABLE IF EXISTS Boss""")
 cur.execute("""DROP TABLE IF EXISTS BossBooking""")
 
 cur.execute("""
+        CREATE TABLE Guild (
+            id INTEGER PRIMARY KEY AUTOINCREMENT
+        )
+    """)
+
+cur.execute("""
+        CREATE TABLE GuildAdmin (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            guild_id INTEGER NOT NULL,
+            role_id INTEGER NOT NULL,
+            FOREIGN KEY (guild_id) REFERENCES Guild(id)
+        )
+    """)
+
+cur.execute("""
+        CREATE TABLE GuildLead (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            guild_id INTEGER NOT NULL,
+            role_id INTEGER NOT NULL,
+            FOREIGN KEY (guild_id) REFERENCES Guild(id)
+        )
+    """)
+
+cur.execute("""
         CREATE TABLE Clan (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            guild_id INTEGER NOT NULL,
+            name TEXT UNIQUE NOT NULL,
+            FOREIGN KEY (guild_id) REFERENCES Guild(id)
+        )
+    """)
+
+cur.execute("""
+        CREATE TABLE Role (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             guild INTEGER NOT NULL,
             name TEXT UNIQUE NOT NULL
@@ -38,8 +76,6 @@ cur.execute("""
             discord_id INTEGER NOT NULL
         )
     """)
-
-
 
 cur.execute("""
         CREATE TABLE ClanPlayer (
@@ -76,7 +112,7 @@ cur.execute("""
             cb_day INTEGER NOT NULL,
             player_id INTEGER NOT NULL,
             cb_id INTEGER NOT NULL,
-            FOREIGN KEY (player_id) REFERENCES PLayer(id),
+            FOREIGN KEY (player_id) REFERENCES Player(id),
             FOREIGN KEY (cb_id) REFERENCES ClanBattle(id)
         )
     """)

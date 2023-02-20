@@ -20,9 +20,12 @@ class CreateGroup(app_commands.Group):
     async def clan(self, interaction: discord.Interaction, clan_name: str):
         """ Create clan """
         try:
-            clan = await self.service.create_clan(clan_name, interaction.guild_id)
+            guild = await self.service.get_guild_by_id(interaction.guild.id)
+            if not guild:
+                raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
+            clan = await self.service.create_clan(clan_name, interaction.guild.id)
             await interaction.response.send_message(f"guild: \n{clan}")
-        except ObjectExistsInDBError as e:
+        except (ObjectExistsInDBError, TableEntryDoesntExistsError) as e:
             await interaction.response.send_message(e)
 
     @app_commands.command(description="Create clan role")
@@ -30,10 +33,13 @@ class CreateGroup(app_commands.Group):
     async def role(self, interaction: discord.Interaction, role_name: str):
         """ Create clan role """
         try:
+            guild = await self.service.get_guild_by_id(interaction.guild.id)
+            if not guild:
+                raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
             clan = await self.service.get_clan_by_guild(interaction.guild_id)
             role = await self.service.create_clan_role(role_name, clan.clan_id)
             await interaction.response.send_message(f"Created \n{role}")
-        except ObjectExistsInDBError as e:
+        except (ObjectExistsInDBError, TableEntryDoesntExistsError) as e:
             await interaction.response.send_message(e)
 
     @app_commands.command(description="Create player")
@@ -41,9 +47,12 @@ class CreateGroup(app_commands.Group):
     async def player(self, interaction: discord.Interaction, player_name: str):
         """ Create player """
         try:
+            guild = await self.service.get_guild_by_id(interaction.guild.id)
+            if not guild:
+                raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
             player = await self.service.create_player(player_name, interaction.user.id)
             await interaction.response.send_message(f"Created \n{player}")
-        except ObjectExistsInDBError as e:
+        except (TableEntryDoesntExistsError, ObjectExistsInDBError) as e:
             await interaction.response.send_message(e)
 
     @app_commands.command(description="Create clan battle")
@@ -51,6 +60,9 @@ class CreateGroup(app_commands.Group):
     async def cb(self, interaction: discord.Interaction, cb_name: str, start_date: str):
         """ Create cb """
         try:
+            guild = await self.service.get_guild_by_id(interaction.guild.id)
+            if not guild:
+                raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
             clan = await self.service.get_clan_by_guild(interaction.guild_id)
             cb = await self.service.create_clan_battle(clan.clan_id, cb_name, start_date)
             clan_players = await self.service.get_players_from_clan(clan.clan_id)
@@ -75,6 +87,9 @@ class CreateGroup(app_commands.Group):
     async def team_composition(self, interaction: discord.Interaction, tc_name: str):
         """ Create team composition """
         try:
+            guild = await self.service.get_guild_by_id(interaction.guild.id)
+            if not guild:
+                raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
             clan = await self.service.get_clan_by_guild(interaction.guild_id)
             cb = await self.service.get_clan_battle_active_by_clan_id(clan.clan_id)
             player = await self.service.get_player_by_discord_id(interaction.user.id)
@@ -92,7 +107,7 @@ class CreateGroup(app_commands.Group):
                 await interaction.response.send_message(f"Created \n{tc}")
             else:
                 await interaction.response.send_message(f"Today is not cb day")
-        except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDays, ValueError) as e:
+        except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDays, ValueError, TableEntryDoesntExistsError) as e:
             await interaction.response.send_message(e)
 
 
