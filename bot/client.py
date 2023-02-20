@@ -2,7 +2,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 from exceptions.exceptions import ParameterIsNullError, ObjectExistsInDBError, TableEntryDoesntExistsError, \
-    ClanBattleCantHaveMoreThenFiveDaysError, DesiredBossIsDeadError
+    ClanBattleCantHaveMoreThenFiveDaysError, DesiredBossIsDeadError, PlayerNotInClanError
 import json
 import os
 from service.service import Service
@@ -114,10 +114,10 @@ def run_discord_bot():
             f"You recorded your hit and killed the {boss_killed_name}."
             f"\nActive boss:{boss.name}")
 
-    async def hit_kill(interaction: discord.Interaction, tc_name: str, ovf_time=''):
+    async def hit_kill(interaction: discord.Interaction, player_discord_id: int, tc_name: str, ovf_time=''):
         """ help function for hit and kill functions """
         try:
-            player = await service.get_player_by_discord_id(interaction.user.id)
+            player = await service.get_player_by_discord_id(player_discord_id)
             clan = await service.get_clan_by_guild(interaction.guild_id)
             cb = await service.get_clan_battle_active_by_clan_id(clan.clan_id)
 
@@ -181,6 +181,48 @@ def run_discord_bot():
             if clan_name_found == clan_name:
                 #           RANKING                         CLAN NAME
                 return ranking
+
+    def boss_char_by_lap(lap):
+        tier2_lap = 4
+        tier3_lap = 11
+        tier4_lap = 35
+        if tier2_lap <= lap < tier3_lap:
+            boss_char = 'B'
+        elif tier3_lap <= lap < tier4_lap:
+            boss_char = 'C'
+        elif lap >= tier4_lap:
+            boss_char = 'D'
+        else:
+            boss_char = 'A'
+        return boss_char
+
+    async def book_boss(interaction, ovf_time, lap, boss_num, comp_name):
+        try:
+            lap_int = int(lap)
+            boss_num_int = int(boss_num)
+            player = await service.get_player_by_discord_id(interaction.user.id)
+            clan = await service.get_clan_by_guild(interaction.guild_id)
+            cb = await service.get_clan_battle_active_by_clan_id(clan.clan_id)
+            boss = await service.get_boss_by_boss_number(boss_num_int, cb.cb_id)
+            boss_char = boss_char_by_lap(lap_int)
+            boss_name = f'{boss_char}{boss.name[1:]}'
+
+            if ovf_time:
+                booking = await service.create_boss_booking(lap_int, cb.lap, False, comp_name, boss.boss_id,
+                                                            player.player_id, cb.cb_id, ovf_time=ovf_time)
+                return await interaction.response.send_message(
+                    f'You booked comp: {booking.comp_name} with ovf time: {ovf_time}, for boss: {boss_name}'
+                    f' in lap: {lap}'
+                )
+            else:
+                booking = await service.create_boss_booking(lap_int, cb.lap, False, comp_name, boss.boss_id,
+                                                            player.player_id, cb.cb_id)
+                return await interaction.response.send_message(
+                    f'You booked comp: {booking.comp_name}, for boss: {boss_name} in lap: {lap}'
+                )
+
+        except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDaysError, ValueError) as e:
+            return await interaction.response.send_message(e)
 
     ### TESTING / MISC COMMANDS ###
 
@@ -288,7 +330,6 @@ def run_discord_bot():
         except:
             return ""
 
-
     @client.tree.command(name="bookhit", description="Book a hit on this boss")
     @app_commands.describe(boss="Boss", expecteddamage="Expected damage")
     async def bookhit(interaction: discord.Interaction, boss: str, expecteddamage: str):
@@ -300,9 +341,8 @@ def run_discord_bot():
             await interaction.response.send_message(
                 f"Booked hit on boss: {boss}"
                 f"\nWith expected damage: {expecteddamage}")
-        except:
-            return ""
-
+        except TableEntryDoesntExistsError as e:
+            await interaction.response.send_message(e)
 
     @client.tree.command(name="hit", description="Register hit")
     @app_commands.describe(tc_name="Name of team composition")
@@ -312,10 +352,28 @@ def run_discord_bot():
             guild = await service.get_guild_by_id(interaction.guild.id)
             if not guild:
                 raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
-            await hit_kill(interaction, tc_name)
+            await hit_kill(interaction, interaction.user.id, tc_name)
         except TableEntryDoesntExistsError as e:
             await interaction.response.send_message(e)
 
+    @client.tree.command(name="pilothit", description="Pilot and register hit")
+    @app_commands.describe(tc_name="Name of team composition", piloted_player_name='Name of the player that was piloted')
+    async def pilot_hit(interaction: discord.Interaction, tc_name: str, piloted_player_name: str):
+        """ Record hit on boss """
+        try:
+            guild = await service.get_guild_by_id(interaction.guild.id)
+            if not guild:
+                raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
+
+            player = await service.get_player_by_name(piloted_player_name)
+            clan_player = await service.get_clan_player(player.player_id)
+            clan = await service.get_clan_by_guild(interaction.guild_id)
+            if clan_player.clan_id != clan.clan_id:
+                raise ValueError(f'This player is not in your clan: {clan.name}')
+
+            await hit_kill(interaction, player.discord_id, tc_name)
+        except (TableEntryDoesntExistsError, PlayerNotInClanError, ValueError) as e:
+            await interaction.response.send_message(e)
 
     @client.tree.command(name="kill", description="Record hit and killing of the boss")
     @app_commands.describe(tc_name="Team composition name", ovf_time="Ovf time")
@@ -325,10 +383,29 @@ def run_discord_bot():
             guild = await service.get_guild_by_id(interaction.guild.id)
             if not guild:
                 raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
-            await hit_kill(interaction, tc_name, ovf_time=ovf_time)
+            await hit_kill(interaction, interaction.user.id, tc_name, ovf_time=ovf_time)
         except TableEntryDoesntExistsError as e:
             await interaction.response.send_message(e)
 
+    @client.tree.command(name="pilotkill", description="Pilot and register kill")
+    @app_commands.describe(tc_name="Name of team composition",
+                           piloted_player_name='Name of the player that was piloted', ovf_time="Ovf time")
+    async def pilot_kill(interaction: discord.Interaction, tc_name: str, piloted_player_name: str, ovf_time: str):
+        """ Record hit on boss """
+        try:
+            guild = await service.get_guild_by_id(interaction.guild.id)
+            if not guild:
+                raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
+
+            player = await service.get_player_by_name(piloted_player_name)
+            clan_player = await service.get_clan_player(player.player_id)
+            clan = await service.get_clan_by_guild(interaction.guild_id)
+            if clan_player.clan_id != clan.clan_id:
+                raise ValueError(f'This player is not in your clan: {clan.name}')
+
+            await hit_kill(interaction, player.discord_id, tc_name, ovf_time=ovf_time)
+        except (TableEntryDoesntExistsError, PlayerNotInClanError,ValueError) as e:
+            await interaction.response.send_message(e)
 
     @client.tree.command(name="ovfhit", description="Removes ovf from your profile")
     async def ovf_hit(interaction: discord.Interaction):
@@ -355,6 +432,36 @@ def run_discord_bot():
         except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDaysError, TableEntryDoesntExistsError) as e:
             return await interaction.response.send_message(e)
 
+    @client.tree.command(name="piloyovfhit", description="Removes ovf from your profile")
+    @app_commands.describe(piloted_player_name='Name of the player that was piloted')
+    async def pilot_ovf_hit(interaction: discord.Interaction,  piloted_player_name: str):
+        """ pilot and record ovf """
+        try:
+            guild = await service.get_guild_by_id(interaction.guild.id)
+            if not guild:
+                raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
+            player = await service.get_player_by_name(piloted_player_name)
+            clan_player = await service.get_clan_player(player.player_id)
+            clan = await service.get_clan_by_guild(interaction.guild_id)
+            if clan_player.clan_id != clan.clan_id:
+                raise ValueError(f'This player is not in your clan: {clan.name}')
+
+            clan = await service.get_clan_by_guild(interaction.guild_id)
+            cb = await service.get_clan_battle_active_by_clan_id(clan.clan_id)
+
+            day_of_cb = get_cb_day(cb)
+
+            if day_of_cb:
+                pcdi = await service.get_pcdi_by_player_id_and_cb_id_and_day(player.player_id, cb.cb_id, day_of_cb)
+                pcdi.overflow = False
+                pcdi.ovf_time = ''
+                pcdi.ovf_comp = ''
+                pcdi = await service.update_pcdi(pcdi)
+                await interaction.response.send_message(f"You have used your ovf")
+            else:
+                await interaction.response.send_message(f"Today is not cb day")
+        except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDaysError, TableEntryDoesntExistsError, ValueError) as e:
+            return await interaction.response.send_message(e)
 
     @client.tree.command(name="ovfkill", description="Kill boss with ovf and removes ovf from your profile")
     async def ovf_kill(interaction: discord.Interaction):
@@ -382,6 +489,38 @@ def run_discord_bot():
         except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDaysError, TableEntryDoesntExistsError) as e:
             return await interaction.response.send_message(e)
 
+    @client.tree.command(name="pilotovfkill", description="Kill boss with ovf and removes ovf from your profile")
+    @app_commands.describe(piloted_player_name='Name of the player that was piloted')
+    async def pilot_ovf_kill(interaction: discord.Interaction,  piloted_player_name: str):
+        """  Record ovf and moves to another (updates lap and tier if needed)"""
+        try:
+            guild = await service.get_guild_by_id(interaction.guild.id)
+            if not guild:
+                raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
+
+            player = await service.get_player_by_name(piloted_player_name)
+            clan_player = await service.get_clan_player(player.player_id)
+            clan = await service.get_clan_by_guild(interaction.guild_id)
+            if clan_player.clan_id != clan.clan_id:
+                raise ValueError(f'This player is not in your clan: {clan.name}')
+
+            clan = await service.get_clan_by_guild(interaction.guild_id)
+            cb = await service.get_clan_battle_active_by_clan_id(clan.clan_id)
+
+            day_of_cb = get_cb_day(cb)
+
+            if day_of_cb:
+                pcdi = await service.get_pcdi_by_player_id_and_cb_id_and_day(player.player_id, cb.cb_id, day_of_cb)
+                pcdi.overflow = False
+                pcdi.ovf_time = ''
+                pcdi.ovf_comp = ''
+                pcdi = await service.update_pcdi(pcdi)
+
+                await update_lap_and_tier(interaction, cb, pcdi)
+            else:
+                await interaction.response.send_message(f"Today is not cb day")
+        except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDaysError, TableEntryDoesntExistsError, ValueError) as e:
+            return await interaction.response.send_message(e)
 
     @client.tree.command(name="check", description="Checks status of clan")
     async def check(interaction: discord.Interaction):
@@ -405,7 +544,6 @@ def run_discord_bot():
                 await interaction.response.send_message(f"Today is not cb day")
         except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDaysError, TableEntryDoesntExistsError) as e:
             return await interaction.response.send_message(e)
-
 
     @client.tree.command(name="selfcheck", description="Checks status of yourself")
     async def self_check(interaction: discord.Interaction):
@@ -459,24 +597,22 @@ def run_discord_bot():
 
     @client.tree.command(name="boss availability", description="Gets all available booking for boss in lap")
     @app_commands.describe(lap="Desired lap", boss_num='Boss number')
-    async def boss_availability(interaction: discord.Interaction, lap: int, boss_num: int):
-        tier2_lap = 4
-        tier3_lap = 11
-        tier4_lap = 35
+    async def boss_availability(interaction: discord.Interaction, lap: str, boss_num: str):
+
         try:
+            lap_int = int(lap)
+            boss_num_int = int(boss_num)
+
+            guild = await service.get_guild_by_id(interaction.guild.id)
+            if not guild:
+                raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
+
             clan = await service.get_clan_by_guild(interaction.guild_id)
             cb = await service.get_clan_battle_active_by_clan_id(clan.clan_id)
             boss = await service.get_active_boss_by_cb_id(cb.cb_id)
-            booking_tup = await service.get_all_boss_bookings_by_lap(boss.boss_number, boss_num, cb.lap, lap, cb.cb_id)
+            booking_tup = await service.get_all_boss_bookings_by_lap(boss.boss_number, boss_num_int, cb.lap, lap_int, cb.cb_id)
+            boss_char = boss_char_by_lap(cb.lap)
 
-            if tier2_lap <= cb.lap < tier3_lap:
-                boss_char = 'B'
-            elif tier3_lap <= cb.lap < tier4_lap:
-                boss_char = 'C'
-            elif cb.lap >= tier4_lap:
-                boss_char = 'D'
-            else:
-                boss_char = 'A'
             message_string = ''
             for i in range(len(booking_tup)):
                 booking = booking_tup[i][0]
@@ -491,10 +627,33 @@ def run_discord_bot():
 
             return await interaction.response.send_message(message_string)
 
-        except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDaysError, TableEntryDoesntExistsError) as e:
+        except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDaysError, TableEntryDoesntExistsError, ValueError) as e:
             return await interaction.response.send_message(e)
 
+    @client.tree.command(name="bookboss", description="Creates booking for desired boss")
+    @app_commands.describe(comp_name='Name of team composition', lap="Desired lap", boss_num='Boss number')
+    async def book_boss(interaction: discord.Interaction, comp_name: str, lap: str, boss_num: str):
+        try:
+            guild = await service.get_guild_by_id(interaction.guild.id)
+            if not guild:
+                raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
+            await book_boss(interaction, '', lap, boss_num, comp_name)
 
+        except TableEntryDoesntExistsError as e:
+            return await interaction.response.send_message(e)
+
+    @client.tree.command(name="bookbossovf", description="Creates booking for desired boss for ovf hit")
+    @app_commands.describe(comp_name='Name of team composition', ovf_time='Overflow time', lap="Desired lap",
+                           boss_num='Boss number')
+    async def book_boss_ovf(interaction: discord.Interaction, comp_name: str, ovf_time: str, lap: str, boss_num: str):
+        try:
+            guild = await service.get_guild_by_id(interaction.guild.id)
+            if not guild:
+                raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
+            await book_boss(interaction, ovf_time, lap, boss_num, comp_name)
+
+        except TableEntryDoesntExistsError as e:
+            return await interaction.response.send_message(e)
     @hit.error
     async def say_error(interaction: discord.Interaction, error):
         await interaction.response.send_message("Not allowed.", ephemeral=True)

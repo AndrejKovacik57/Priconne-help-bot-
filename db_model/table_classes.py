@@ -144,13 +144,12 @@ class Boss:
 
 
 class BossBooking:
-    def __init__(self, boss_booking_id, lap, comp_name, exp_damage, boss_id, player_id, overflow=False, ovf_time=''):
+    def __init__(self, boss_booking_id, lap, comp_name, boss_id, player_id, overflow=False, ovf_time=''):
         self.boss_booking_id = boss_booking_id
         self.lap = lap
         self.overflow = overflow
         self.ovf_time = ovf_time
         self.comp_name = comp_name
-        self.exp_damage = exp_damage
         self.boss_id = boss_id
         self.player_id = player_id
 
@@ -161,7 +160,6 @@ class BossBooking:
             f"overflow: {self.overflow}\n"
             f"ovf_time: {self.ovf_time}\n"
             f"comp_name: {self.comp_name}\n"
-            f"exp_damage: {self.exp_damage}\n"
             f"boss_id: {self.boss_id}\n"
             f"player_id: {self.player_id}\n"
         )

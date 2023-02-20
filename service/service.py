@@ -2,7 +2,7 @@ import aiosqlite
 from exceptions.exceptions import ParameterIsNullError, ObjectExistsInDBError, TableEntryDoesntExistsError, \
     PlayerCBDayInfoLimitOfEntriesForPlayerAndCBReached, ClanBattleCantHaveMoreThenFiveDaysError, \
     ObjectDoesntExistsInDBError, PlayerAlreadyInClanError, PlayerNotInClanError, ThereIsAlreadyActiveCBError, \
-    DesiredBossIsDeadError
+    DesiredBossIsDeadError, CantBookDeadBossError
 from db_model.table_classes import Clan, Player, ClanPlayer, ClanBattle, PlayerCBDayInfo, TeamComposition, Boss, \
     BossBooking, \
     ClanRole, Guild, GuildRole
@@ -1075,11 +1075,16 @@ class Service:
         return Boss(updated_result[0], updated_result[1], updated_result[2], updated_result[3], updated_result[4],
                     updated_result[5])
 
-    async def create_boss_booking(self, lap: int, overflow: bool, ovf_time: str, comp_name: str, exp_damage: int,
-                                  boss_id: int, player_id: int) -> BossBooking:
+    async def create_boss_booking(self, lap: int, curr_lap: int, overflow: bool, comp_name: str,
+                                  boss_id: int, player_id: int, cb_id: int, ovf_time='') -> BossBooking:
         """ Insert boss booking into table. """
-        if not (lap and comp_name and exp_damage and boss_id and player_id):
-            raise ParameterIsNullError("Cb lap and comp_name exp_damage boss_id cant player_id be empty")
+        if not (lap and comp_name and boss_id and player_id and cb_id):
+            raise ParameterIsNullError("Cb lap and comp_name boss_id cant player_id be empty")
+
+        active_boss = await self.get_active_boss_by_cb_id(cb_id)
+        boss = await self.get_boss_by_id(boss_id)
+        if curr_lap == lap and active_boss.boss_number > boss.boss_number or curr_lap > lap:
+            raise CantBookDeadBossError('You cant book dead boss')
 
         async with aiosqlite.connect(self.db) as conn:
             cur = await conn.cursor()
@@ -1087,18 +1092,18 @@ class Service:
                 raise ParameterIsNullError("Hit is marked as ovf but ovf_time is not set")
 
             elif overflow and ovf_time:
-                await cur.execute(""" INSERT INTO BossBooking(lap, overflow, ovf_time, comp_name, exp_damage, boss_id, player_id) 
-                                VALUES (:lap,:overflow,:ovf_time,:comp_name,:exp_damage,:boss_id,:player_id) """,
+                await cur.execute(""" INSERT INTO BossBooking(lap, overflow, ovf_time, comp_name, boss_id, player_id) 
+                                VALUES (:lap,:overflow,:ovf_time,:comp_name,:boss_id,:player_id) """,
                                   {'lap': lap, 'overflow': overflow, 'ovf_time': ovf_time, 'comp_name': comp_name,
-                                   'exp_damage': exp_damage, 'boss_id': boss_id, 'player_id': player_id})
-                bb = BossBooking(cur.lastrowid, lap, comp_name, exp_damage, boss_id, player_id, overflow=overflow,
+                                   'boss_id': boss_id, 'player_id': player_id})
+                bb = BossBooking(cur.lastrowid, lap, comp_name, boss_id, player_id, overflow=overflow,
                                  ovf_time=ovf_time)
             else:
-                await cur.execute(""" INSERT INTO BossBooking(lap, comp_name, exp_damage, boss_id, player_id) 
-                                VALUES (:lap,:comp_name,:exp_damage,:boss_id,:player_id) """,
-                                  {'lap': lap, 'comp_name': comp_name, 'exp_damage': exp_damage, 'boss_id': boss_id,
+                await cur.execute(""" INSERT INTO BossBooking(lap, comp_name, boss_id, player_id) 
+                                VALUES (:lap,:comp_name,:boss_id,:player_id) """,
+                                  {'lap': lap, 'comp_name': comp_name, 'boss_id': boss_id,
                                    'player_id': player_id})
-                bb = BossBooking(cur.lastrowid, lap, comp_name, exp_damage, boss_id, player_id)
+                bb = BossBooking(cur.lastrowid, lap, comp_name, boss_id, player_id)
 
             await conn.commit()
 
@@ -1118,8 +1123,8 @@ class Service:
         if not result:
             return None
 
-        return BossBooking(result[0], result[1], result[4], result[5], result[6], result[7], overflow=result[2],
-                           ovf_time=result[3])
+        return BossBooking(result[0], result[1], result[4], result[5], result[6], overflow=result[2],
+                            ovf_time=result[3])
 
     async def get_boss_bookings_by_player_id(self, player_id: int) -> list:
         """ Gets boss bookings by player Id """
@@ -1132,7 +1137,7 @@ class Service:
             await cur.execute(""" SELECT * FROM BossBooking WHERE player_id=:player_id """, {'player_id': player_id})
             results = await cur.fetchall()
 
-        return [BossBooking(result[0], result[1], result[4], result[5], result[6], result[7], overflow=result[2],
+        return [BossBooking(result[0], result[1], result[4], result[5], result[6], overflow=result[2],
                             ovf_time=result[3]) for result in results]
 
     async def get_boss_bookings_by_boss_id(self, boss_id: int) -> list:
@@ -1146,7 +1151,7 @@ class Service:
             await cur.execute(""" SELECT * FROM BossBooking WHERE boss_id=:boss_id """, {'boss_id': boss_id})
             results = await cur.fetchall()
 
-        return [BossBooking(result[0], result[1], result[4], result[5], result[6], result[7], overflow=result[2],
+        return [BossBooking(result[0], result[1], result[4], result[5], result[6], overflow=result[2],
                             ovf_time=result[3]) for result in results]
 
     async def get_all_boss_bookings_by_lap(self, cur_boss: int, desired_boss: int, cur_lap: int, lap: int, cb_id: int) \
@@ -1169,10 +1174,10 @@ class Service:
             results = await cur.fetchall()
 
         return tuple([(
-                BossBooking(result[0], result[1], result[4], result[5], result[6], result[7], overflow=result[2],
+                BossBooking(result[0], result[1], result[4], result[5], result[6], overflow=result[2],
                             ovf_time=result[3]),
-                Boss(result[8], result[9], result[10], result[11], result[12], result[13]),
-                Player(result[14], result[15], result[16])
+                Boss(result[7], result[8], result[9], result[10], result[1], result[12]),
+                Player(result[13], result[14], result[15])
             ) for result in results])
 
     async def update_boss_booking(self, bb: BossBooking) -> BossBooking:
@@ -1181,8 +1186,8 @@ class Service:
         if not bb_to_be_updated:
             raise TableEntryDoesntExistsError(f'Boss booking id {bb.boss_booking_id}')
 
-        if not (bb.lap and bb.comp_name and bb.exp_damage):
-            raise ParameterIsNullError("Boss booking lap, comp_name, exp_damage cant be empty")
+        if not (bb.lap and bb.comp_name):
+            raise ParameterIsNullError("Boss booking lap, comp_name cant be empty")
 
         if bb.overflow and not bb.ovf_time:
             raise ParameterIsNullError("Hit is marked as ovf but ovf_time is not set")
@@ -1192,21 +1197,20 @@ class Service:
             if bb.overflow and bb.ovf_time:
                 await cur.execute(""" 
                                UPDATE BossBooking 
-                               SET lap=:lap,overflow=:overflow,ovf_time=:ovf_time,comp_name=:comp_name,exp_damage=:exp_damage
+                               SET lap=:lap,overflow=:overflow,ovf_time=:ovf_time,comp_name=:comp_name
                                WHERE id=:id """,
                                   {'lap': bb.lap, 'overflow': bb.overflow, 'ovf_time': bb.ovf_time,
-                                   'comp_name': bb.comp_name,
-                                   'exp_damage': bb.exp_damage, 'id': bb.boss_booking_id})
+                                   'comp_name': bb.comp_name, 'id': bb.boss_booking_id})
             else:
                 await cur.execute(""" 
                                 UPDATE BossBooking 
-                                SET lap=:lap,comp_name=:comp_name,exp_damage=:exp_damage WHERE id=:id """,
-                                  {'lap': bb.lap, 'comp_name': bb.comp_name, 'exp_damage': bb.exp_damage,
-                                   'id': bb.boss_booking_id})
+                                SET lap=:lap,comp_name=:comp_name WHERE id=:id """,
+                                  {'lap': bb.lap, 'comp_name': bb.comp_name, 'id': bb.boss_booking_id})
             await conn.commit()
 
             await cur.execute("SELECT * FROM BossBooking WHERE id=:id", {'id': bb.boss_booking_id})
             updated_result = await cur.fetchone()
 
         return BossBooking(updated_result[0], updated_result[1], updated_result[4], updated_result[5],
-                           updated_result[6], updated_result[7], overflow=updated_result[2], ovf_time=updated_result[3])
+                           updated_result[6], overflow=updated_result[2],  ovf_time=updated_result[3])
+

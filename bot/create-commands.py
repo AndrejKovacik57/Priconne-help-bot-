@@ -1,11 +1,11 @@
 import discord
 from discord import app_commands
 from exceptions.exceptions import ParameterIsNullError, ObjectExistsInDBError, TableEntryDoesntExistsError, \
-    PlayerCBDayInfoLimitOfEntriesForPlayerAndCBReached, ClanBattleCantHaveMoreThenFiveDays, ObjectDoesntExistsInDBError, \
-    PlayerAlreadyInClanError, PlayerNotInClanError
+    PlayerCBDayInfoLimitOfEntriesForPlayerAndCBReached, ClanBattleCantHaveMoreThenFiveDaysError, \
+    ObjectDoesntExistsInDBError, PlayerAlreadyInClanError, PlayerNotInClanError
 from service.service import Service
-from db_model.table_classes import Clan, Player, ClanPlayer, ClanBattle, PlayerCBDayInfo, TeamComposition, Boss, BossBooking, \
-    ClanRole
+from db_model.table_classes import Clan, Player, ClanPlayer, ClanBattle, PlayerCBDayInfo, TeamComposition, Boss, \
+    BossBooking,  ClanRole
 from datetime import datetime, timedelta
 import pytz
 
@@ -107,7 +107,7 @@ class CreateGroup(app_commands.Group):
                 await interaction.response.send_message(f"Created \n{tc}")
             else:
                 await interaction.response.send_message(f"Today is not cb day")
-        except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDays, ValueError, TableEntryDoesntExistsError) as e:
+        except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDaysError, ValueError, TableEntryDoesntExistsError) as e:
             await interaction.response.send_message(e)
 
 

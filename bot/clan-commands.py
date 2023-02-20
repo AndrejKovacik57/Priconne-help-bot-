@@ -1,8 +1,8 @@
 import discord
 from discord import app_commands
 from exceptions.exceptions import ParameterIsNullError, ObjectExistsInDBError, TableEntryDoesntExistsError, \
-    PlayerCBDayInfoLimitOfEntriesForPlayerAndCBReached, ClanBattleCantHaveMoreThenFiveDays, ObjectDoesntExistsInDBError, \
-    PlayerAlreadyInClanError, PlayerNotInClanError
+    PlayerCBDayInfoLimitOfEntriesForPlayerAndCBReached, ClanBattleCantHaveMoreThenFiveDaysError, \
+    ObjectDoesntExistsInDBError, PlayerAlreadyInClanError, PlayerNotInClanError
 from service.service import Service
 from db_model.table_classes import Clan, Player, ClanPlayer, ClanBattle, PlayerCBDayInfo, TeamComposition, Boss, \
     BossBooking, \

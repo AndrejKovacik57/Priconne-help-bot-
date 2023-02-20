@@ -144,7 +144,6 @@ cur.execute("""
             overflow INTEGER NULL,
             ovf_time TEXT NULL,
             comp_name TEXT NOT NULL,
-            exp_damage INTEGER NULL,
             boss_id INTEGER NOT NULL,
             player_id INTEGER NOT NULL,
             FOREIGN KEY (boss_id) REFERENCES Boss(id),

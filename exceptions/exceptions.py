@@ -47,3 +47,8 @@ class ClanBattleCantHaveMoreThenFiveDaysError(ValueError):
 class DesiredBossIsDeadError(ValueError):
     def __init__(self, message):
         super().__init__(message)
+
+
+class CantBookDeadBossError(ValueError):
+    def __init__(self, message):
+        super().__init__(message)
