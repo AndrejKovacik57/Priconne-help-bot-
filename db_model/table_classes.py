@@ -1,13 +1,13 @@
 
 class Clan:
-    def __init__(self, clan_id, guild, name):
+    def __init__(self, clan_id, guild_id, name):
         self.clan_id = clan_id
-        self.guild = guild
+        self.guild_id = guild_id
         self.name = name
 
     def __str__(self):
         return (f"clan_id: {self.clan_id}\n"
-                f"guild: {self.guild}\n"
+                f"guild_id: {self.guild_id}\n"
                 f"name: {self.name}\n")
 
 

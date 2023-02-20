@@ -21,7 +21,7 @@ cur.execute("""DROP TABLE IF EXISTS BossBooking""")
 
 cur.execute("""
         CREATE TABLE Guild (
-            id INTEGER PRIMARY KEY AUTOINCREMENT
+            server_id INTEGER PRIMARY KEY
         )
     """)
 
@@ -30,7 +30,7 @@ cur.execute("""
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             guild_id INTEGER NOT NULL,
             role_id INTEGER NOT NULL,
-            FOREIGN KEY (guild_id) REFERENCES Guild(id)
+            FOREIGN KEY (guild_id) REFERENCES Guild(server_id)
         )
     """)
 
@@ -39,7 +39,7 @@ cur.execute("""
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             guild_id INTEGER NOT NULL,
             role_id INTEGER NOT NULL,
-            FOREIGN KEY (guild_id) REFERENCES Guild(id)
+            FOREIGN KEY (guild_id) REFERENCES Guild(server_id)
         )
     """)
 
@@ -48,7 +48,7 @@ cur.execute("""
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             guild_id INTEGER NOT NULL,
             name TEXT UNIQUE NOT NULL,
-            FOREIGN KEY (guild_id) REFERENCES Guild(id)
+            FOREIGN KEY (guild_id) REFERENCES Guild(server_id)
         )
     """)
 
