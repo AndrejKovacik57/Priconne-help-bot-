@@ -62,12 +62,32 @@ class ServerGroup(app_commands.Group):
             embed = discord.Embed(title="Error", color=0x3083e3, description="You don't have permissions to run this command! Please consult your **server admin**.")
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
+    @app_commands.command(description="Remove admin role")
+    @app_commands.checks.has_permissions(administrator=True)
+    async def removeadminrole(self, interaction: discord.Interaction, role_id: str):
+        """ Remove admin role"""
+        try:
+            role_id_int = int(role_id)
+            guild_id = interaction.guild.id
+            guild = await self.service.get_guild_by_id(guild_id)
+            if not guild:
+                raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
+            await self.service.remove_admin_role(guild_id, role_id_int)
+            await interaction.response.send_message(f"Removed role: <@&{role_id}> from admin role", ephemeral=False)
+        except (ParameterIsNullError, ObjectExistsInDBError, TableEntryDoesntExistsError, ValueError) as e:
+            await interaction.response.send_message(e)
+
+    @removeadminrole.error
+    async def removeadminrole_error(self, interaction: discord.Interaction, error):
+        if isinstance(error, app_commands.errors.MissingPermissions):
+            embed = discord.Embed(title="Error", color=0x3083e3, description="You don't have permissions to run this command! Please consult your **server admin**.")
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+
     @app_commands.command(description="Add lead role")
     async def addleadrole(self, interaction: discord.Interaction, role_id: str):
         """ Add lead role """
         try:
             role_id_int = int(role_id)
-            # role_id = 1051000941618405426 # Temp, currently set to @Priconne Lead role
             guild_id = interaction.guild.id
             guild = await self.service.get_guild_by_id(guild_id)
             if not guild:
@@ -79,6 +99,27 @@ class ServerGroup(app_commands.Group):
                     if user_role.id == guild_admin[2]:
                         await self.service.add_lead_role(guild_id, role_id_int)
                         await interaction.response.send_message(f"Added <@&{role_id}> as a lead role!")
+                        return
+            await interaction.response.send_message(f"You don't have permission to use this command!")
+        except (ParameterIsNullError, ObjectExistsInDBError, TableEntryDoesntExistsError, ValueError) as e:
+            await interaction.response.send_message(e)
+
+    @app_commands.command(description="Remove lead role")
+    async def removeleadrole(self, interaction: discord.Interaction, role_id: str):
+        """ Remove lead role """
+        try:
+            role_id_int = int(role_id)
+            guild_id = interaction.guild.id
+            guild = await self.service.get_guild_by_id(guild_id)
+            if not guild:
+                raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
+            user_roles = interaction.user.roles
+            guild_admins = await self.service.get_guild_admin(guild_id)
+            for user_role in user_roles:
+                for guild_admin in guild_admins:
+                    if user_role.id == guild_admin[2]:
+                        await self.service.remove_lead_role(guild_id, role_id_int)
+                        await interaction.response.send_message(f"Removed <@&{role_id}> from the lead role!")
                         return
             await interaction.response.send_message(f"You don't have permission to use this command!")
         except (ParameterIsNullError, ObjectExistsInDBError, TableEntryDoesntExistsError, ValueError) as e:

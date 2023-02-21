@@ -20,11 +20,26 @@ class CreateGroup(app_commands.Group):
     async def clan(self, interaction: discord.Interaction, clan_name: str):
         """ Create clan """
         try:
-            guild = await self.service.get_guild_by_id(interaction.guild.id)
+            guild_id = interaction.guild.id
+            guild = await self.service.get_guild_by_id(guild_id)
             if not guild:
                 raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
-            clan = await self.service.create_clan(clan_name, interaction.guild.id)
-            await interaction.response.send_message(f"guild: \n{clan}")
+            user_roles = interaction.user.roles
+            guild_admins = await self.service.get_guild_admin(guild_id)
+            for user_role in user_roles:
+                for guild_admin in guild_admins:
+                    if user_role.id == guild_admin[2]:
+                        clan = await self.service.create_clan(clan_name, guild_id)
+                        await interaction.response.send_message(f"Created clan: **{clan.name}**")
+                        return
+            guild_leads = await self.service.get_guild_lead(guild_id)
+            for user_role in user_roles:
+                for guild_lead in guild_leads:
+                    if user_role.id == guild_lead[2]:
+                        clan = await self.service.create_clan(clan_name, guild_id)
+                        await interaction.response.send_message(f"Created clan: **{clan.name}**")
+                        return
+            
         except (ObjectExistsInDBError, TableEntryDoesntExistsError) as e:
             await interaction.response.send_message(e)
 
@@ -51,7 +66,7 @@ class CreateGroup(app_commands.Group):
             if not guild:
                 raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
             player = await self.service.create_player(player_name, interaction.user.id)
-            await interaction.response.send_message(f"Created \n{player}")
+            await interaction.response.send_message(f"Created player: **{player.name}**")
         except (TableEntryDoesntExistsError, ObjectExistsInDBError) as e:
             await interaction.response.send_message(e)
 

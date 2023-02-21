@@ -32,10 +32,6 @@ user_agent = UserAgent(browsers=["chrome", "edge", "firefox", "safari", "opera"]
 client = commands.Bot(command_prefix="!", intents=discord.Intents.all())
 
 
-# def is_owner(interaction: discord.Interaction):
-#     if interaction.user.id == interaction.guild.role
-
-
 def run_discord_bot():
     @client.event
     async def on_ready():
@@ -228,17 +224,6 @@ def run_discord_bot():
 
     @client.tree.command(name="hello")
     async def hello(interaction: discord.Interaction):
-        # temp = interaction.user.roles
-        # temp3 = []
-        # for item in temp:
-        #     temp3.append(item.id)
-        #     # print(item.id)
-        # user_roles = interaction.user.roles
-        # guild_admins = await service.get_guild_admin(interaction.guild.id)
-        # await interaction.response.send_message(temp3)
-        # await interaction.response.send_message(temp[4].id)
-        # temp2 = await service.get_guild_roles(interaction.guild.id)
-        # await interaction.response.send_message(temp2[0])
         await interaction.response.send_message(f"Hi fellow cosplayer {interaction.user.mention}! Your Discord ID is {interaction.user.id}. I'm Marin", ephemeral=False)
 
 
@@ -253,6 +238,12 @@ def run_discord_bot():
             """)
         # embed.set_author(name="MangaUpdates", icon_url=self.bot.user.avatar.url)
         # embed.set_author(name="Marin")
+        embed.add_field(name="__Server__",
+            value="""
+                **server setup**: Register server in bot. **MUST** run or else bot will not operate.
+                **server addadminrole `role_id`**: Add role *(role ID)* as **admin role** in bot.
+                **server addleadrole `role_id`**: Add role *(role ID)* as **lead role** in bot.
+            """, inline=False)
         embed.add_field(name="__Create__",
             value="""
                 **create clan `clan`**: Create clan called `clan`.
@@ -296,22 +287,22 @@ def run_discord_bot():
     ### GENERAL COMMANDS ###
 
 
-    @client.tree.command(name="bossavailability", description="Displays hit bookings on all bosses")
-    async def bossavailability(interaction: discord.Interaction):
-        """ Check info regarding boss availability """
-        try:
-            guild = await service.get_guild_by_id(interaction.guild.id)
-            if not guild:
-                raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
-            await interaction.response.send_message(
-                f"__**Overflow Count: \_\_\_**__"
-                f"\nBoss 1: \_\_ hits booked"
-                f"\nBoss 2: \_\_ hits booked"
-                f"\nBoss 3: \_\_ hits booked"
-                f"\nBoss 4: \_\_ hits booked"
-                f"\nBoss 5: \_\_ hits booked")
-        except:
-            return ""
+    # @client.tree.command(name="bossavailability", description="Displays hit bookings on all bosses")
+    # async def bossavailability(interaction: discord.Interaction):
+    #     """ Check info regarding boss availability """
+    #     try:
+    #         guild = await service.get_guild_by_id(interaction.guild.id)
+    #         if not guild:
+    #             raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
+    #         await interaction.response.send_message(
+    #             f"__**Overflow Count: \_\_\_**__"
+    #             f"\nBoss 1: \_\_ hits booked"
+    #             f"\nBoss 2: \_\_ hits booked"
+    #             f"\nBoss 3: \_\_ hits booked"
+    #             f"\nBoss 4: \_\_ hits booked"
+    #             f"\nBoss 5: \_\_ hits booked")
+    #     except:
+    #         return ""
 
 
     @client.tree.command(name="ovf", description="Overflows currently in clan")
@@ -322,7 +313,7 @@ def run_discord_bot():
             if not guild:
                 raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
             await interaction.response.send_message(
-                f"__**Overflow Count: \_\_\_**__"
+                f"__**Overflow Count:**__ \_\_\_"
                 f"\nPlayer: \_\_\_\_"
                 f"\nBoss: \_\_\_"
                 f"\nTime: \_\_:\_\_"
@@ -432,7 +423,7 @@ def run_discord_bot():
         except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDaysError, TableEntryDoesntExistsError) as e:
             return await interaction.response.send_message(e)
 
-    @client.tree.command(name="piloyovfhit", description="Removes ovf from your profile")
+    @client.tree.command(name="pilotovfhit", description="Removes ovf from your profile")
     @app_commands.describe(piloted_player_name='Name of the player that was piloted')
     async def pilot_ovf_hit(interaction: discord.Interaction,  piloted_player_name: str):
         """ pilot and record ovf """
@@ -595,7 +586,7 @@ def run_discord_bot():
         except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDaysError, TableEntryDoesntExistsError) as e:
             return await interaction.response.send_message(e)
 
-    @client.tree.command(name="boss availability", description="Gets all available booking for boss in lap")
+    @client.tree.command(name="bossavailability", description="Gets all available booking for boss in lap")
     @app_commands.describe(lap="Desired lap", boss_num='Boss number')
     async def boss_availability(interaction: discord.Interaction, lap: str, boss_num: str):
 
@@ -607,7 +598,9 @@ def run_discord_bot():
             if not guild:
                 raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
 
-            clan = await service.get_clan_by_guild(interaction.guild_id)
+            clan = await service.get_clan_by_guild(interaction.guild.id)
+            if not clan:
+                raise TableEntryDoesntExistsError("Clan doesn't exist!")
             cb = await service.get_clan_battle_active_by_clan_id(clan.clan_id)
             boss = await service.get_active_boss_by_cb_id(cb.cb_id)
             booking_tup = await service.get_all_boss_bookings_by_lap(boss.boss_number, boss_num_int, cb.lap, lap_int, cb.cb_id)
