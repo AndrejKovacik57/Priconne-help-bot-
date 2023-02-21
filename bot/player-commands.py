@@ -22,7 +22,7 @@ class PlayerGroup(app_commands.Group):
                 raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
             player_name = await self.service.get_own_player_by_name(player, interaction.user.id)
             await self.service.remove_player(player_name.player_id)
-            await interaction.response.send_message(f"I'm the **/player delete** command!\n*(Still working on functionality)*")
+            await interaction.response.send_message(f"Successfully deleted **{player}**")
         except TableEntryDoesntExistsError as e:
             await interaction.response.send_message(e)
 

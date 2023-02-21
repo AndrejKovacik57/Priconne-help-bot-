@@ -145,7 +145,7 @@ class ClanGroup(app_commands.Group):
             player_to_add = await self.service.get_own_player_by_name(player, interaction.user.id)
             clan_to_join = await self.service.get_clan_by_name(clan)
             await self.service.add_player_to_clan(clan_to_join.clan_id, player_to_add.player_id)
-            await interaction.response.send_message(f"Added **{player}** to clan: **{clan}**.")
+            await interaction.response.send_message(f"Joined __{clan}__ under player: **{player}**.")
         except (ObjectDoesntExistsInDBError, ObjectExistsInDBError, ParameterIsNullError, PlayerAlreadyInClanError, TableEntryDoesntExistsError) as e:
             await interaction.response.send_message(e)
 

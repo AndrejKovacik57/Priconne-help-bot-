@@ -95,17 +95,12 @@ class Service:
 
         async with aiosqlite.connect(self.db) as conn:
             cur = await conn.cursor()
-
-            await cur.execute(""" SELECT * FROM GuildAdmin WHERE role_id=:role_id and guild_id=:guild_id """,
-                              { 'role_id': role_id, 'guild_id': guild_id })
+            await cur.execute(""" SELECT * FROM GuildAdmin WHERE role_id=:role_id and guild_id=:guild_id """, 
+                { 'role_id': role_id, 'guild_id': guild_id })
             result = await cur.fetchone()
-
             if not result:
                 raise TableEntryDoesntExistsError("Role is not registered as an admin!")
-
-            await cur.execute(""" DELETE FROM GuildAdmin WHERE role_id=:role_id and guild_id=:guild_id """, {
-                { 'role_id': role_id, 'guild_id': guild_id }
-            })
+            await cur.execute(""" DELETE FROM GuildAdmin WHERE role_id = ? and guild_id = ? """, (role_id, guild_id))
             await conn.commit()
         return True
     
@@ -161,9 +156,7 @@ class Service:
             if not result:
                 raise TableEntryDoesntExistsError("Role is not registered as an lead!")
 
-            await cur.execute(""" DELETE FROM GuildLead WHERE role_id=:role_id and guild_id=:guild_id """, {
-                { 'role_id': role_id, 'guild_id': guild_id }
-            })
+            await cur.execute(""" DELETE FROM GuildLead WHERE role_id = ? and guild_id = ? """, (role_id, guild_id))
             await conn.commit()
         return True
 
@@ -477,27 +470,16 @@ class Service:
         if clan_player.clan_name != "NONE":
             async with aiosqlite.connect(self.db) as conn:
                 cur = await conn.cursor()
-                await cur.execute(""" DELETE FROM ClanPlayer WHERE clan_id=:clan_id AND player_id=:player_id """, {
-                    {'clan_id': clan_player.clan_id, 'player_id': player_id}
-                })
+                await cur.execute(""" DELETE FROM ClanPlayer WHERE clan_id = ? AND player_id = ? """, (clan_player.clan_id, player_id))
                 await conn.commit()
-                await cur.execute(""" SELECT * FROM Player WHERE id=:player_id """,
-                              { 'player_id': player_id })
-                clan_player_result = await cur.fetchone()
-
-                if not clan_player_result:
-                    raise PlayerNotInClanError('Player is not in the clan')
-                await cur.execute(""" DELETE FROM Player WHERE id=:player_id """, {
-                    { 'player_id': player_id }
-                })
+                await cur.execute(""" DELETE FROM Player WHERE id = ? """, (player_id,))
                 await conn.commit()
+                return
 
         async with aiosqlite.connect(self.db) as conn:
             cur = await conn.cursor()
 
-            await cur.execute(""" DELETE FROM Player WHERE id=:player_id """, {
-                { 'player_id': player_id }
-            })
+            await cur.execute(""" DELETE FROM Player WHERE id = ? """, (player_id,))
             await conn.commit()
         
         return True
@@ -568,7 +550,7 @@ class Service:
             results = await cur.fetchall()
 
             if not results:
-                raise ObjectDoesntExistsInDBError('This player doesn\'t exist')
+                raise ObjectDoesntExistsInDBError('You haven\'t registered with the bot! Please run **/player create** `name`.')
             
         player_list = [result for result in results]
 
@@ -703,10 +685,7 @@ class Service:
 
             if not clan_player_result:
                 raise PlayerNotInClanError('Player is not in the clan')
-            print(clan_id, player_id)
-            await cur.execute(""" DELETE FROM ClanPlayer WHERE clan_id=:clan_id AND player_id=:player_id """, {
-                {'clan_id': clan_id, 'player_id': player_id}
-            })
+            await cur.execute(""" DELETE FROM ClanPlayer WHERE clan_id = ? AND player_id = ? """, (clan_id, player_id))
             await conn.commit()
         return await self.get_players_from_clan(clan_id)
 
