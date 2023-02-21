@@ -91,21 +91,22 @@ class CreateGroup(app_commands.Group):
                 raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
             clan = await self.service.get_clan_by_guild(interaction.guild_id)
             cb = await self.service.get_clan_battle_active_by_clan_id(clan.clan_id)
-            player = await self.service.get_player_by_discord_id(interaction.user.id)
+            players = await self.service.get_player_by_discord_id(interaction.user.id)
+            if len(players) == 1:
+                player = players[0]
+                utc = pytz.UTC  # Create a UTC timezone object
+                current_time_object = datetime.now(tz=utc).date()
+                start_date_object = datetime.strptime(cb.start_date, "%d-%m-%Y").date()
+                end_date_object = datetime.strptime(cb.end_date, "%d-%m-%Y").date()
+                if start_date_object <= current_time_object <= end_date_object:
+                    day_of_cb = (current_time_object - start_date_object).days + 1
 
-            utc = pytz.UTC  # Create a UTC timezone object
-            current_time_object = datetime.now(tz=utc).date()
-            start_date_object = datetime.strptime(cb.start_date, "%d-%m-%Y").date()
-            end_date_object = datetime.strptime(cb.end_date, "%d-%m-%Y").date()
-            if start_date_object <= current_time_object <= end_date_object:
-                day_of_cb = (current_time_object - start_date_object).days + 1
+                    pcdi = await self.service.get_pcdi_by_player_id_and_cb_id_and_day(player.player_id, cb.cb_id, day_of_cb)
+                    tc = await self.service.create_team_composition(tc_name, pcdi.pcbdi_id)
 
-                pcdi = await self.service.get_pcdi_by_player_id_and_cb_id_and_day(player.player_id, cb.cb_id, day_of_cb)
-                tc = await self.service.create_team_composition(tc_name, pcdi.pcbdi_id)
-
-                await interaction.response.send_message(f"Created \n{tc}")
-            else:
-                await interaction.response.send_message(f"Today is not cb day")
+                    await interaction.response.send_message(f"Created \n{tc}")
+                else:
+                    await interaction.response.send_message(f"Today is not cb day")
         except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDaysError, ValueError, TableEntryDoesntExistsError) as e:
             await interaction.response.send_message(e)
 
