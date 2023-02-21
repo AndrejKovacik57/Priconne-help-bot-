@@ -2,7 +2,7 @@ import aiosqlite
 from exceptions.exceptions import ParameterIsNullError, ObjectExistsInDBError, TableEntryDoesntExistsError, \
     PlayerCBDayInfoLimitOfEntriesForPlayerAndCBReached, ClanBattleCantHaveMoreThenFiveDaysError, \
     ObjectDoesntExistsInDBError, PlayerAlreadyInClanError, PlayerNotInClanError, ThereIsAlreadyActiveCBError, \
-    DesiredBossIsDeadError, CantBookDeadBossError
+    DesiredBossIsDeadError, CantBookDeadBossError, NoActiveCBError
 from db_model.table_classes import Clan, Player, ClanPlayer, ClanBattle, PlayerCBDayInfo, TeamComposition, Boss, \
     BossBooking, Guild, GuildRole
 from datetime import datetime, timedelta
@@ -45,8 +45,7 @@ class Service:
             result = await cur.fetchone()
 
         if not result:
-            return None
-            # raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
+            raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
 
         return Guild(result[0])
 
@@ -220,7 +219,7 @@ class Service:
             result = await cur.fetchone()
 
             if result:
-                raise ObjectExistsInDBError("Clan already exists!")
+                raise ObjectExistsInDBError('Clan already exists!')
 
             await cur.execute(""" INSERT INTO Clan(name, guild_id) VALUES (:name,:guild_id) """,
                               {'name': clan_name, 'guild_id': guild_id})
@@ -273,7 +272,7 @@ class Service:
             result = await cur.fetchone()
 
         if not result:
-            return None
+            TableEntryDoesntExistsError('There is no clan for this server')
 
         return Clan(result[0], result[1], result[2])
 
@@ -446,12 +445,14 @@ class Service:
             await cur.execute(""" 
                                 SELECT p.*
                                 FROM Player p
-                                JOIN ClanPlayer cp ON p.id = cp.player_id
-                                WHERE p.name = :player_name AND cp.clan_id = :clan_id""",
-                              {'name': player_name})
+                                JOIN ClanPlayer cp ON p.id=cp.player_id
+                                WHERE p.name=:player_name AND cp.clan_id=:clan_id""",
+                              {'player_name': player_name})
             result = await cur.fetchone()
+
         if not result:
-            return None
+            raise TableEntryDoesntExistsError('Player doesnt exist')
+
         return Player(result[0], result[1], result[2])
 
     async def get_player_by_discord_id_and_clan_id(self, discord_id: int, clan_id: int) -> list:
@@ -486,11 +487,11 @@ class Service:
             await cur.execute(""" 
                                 SELECT *
                                 FROM Player                
-                                WHERE name = :player_name""",
-                              {'name': player_name})
+                                WHERE name=:player_name""",
+                              {'player_name': player_name})
             result = await cur.fetchone()
         if not result:
-            return None
+            raise TableEntryDoesntExistsError('Player doesnt exist')
         return Player(result[0], result[1], result[2])
 
     async def get_player_by_discord_id(self, discord_id: int) -> list:
@@ -674,11 +675,12 @@ class Service:
         """
         if not (cb_name and clan_id and start_date):
             raise ParameterIsNullError("Cb name, start date and clan id cant be empty")
-
-        start_date_object = datetime.strptime(start_date, "%d-%m-%Y").date()
-        end_date_object = start_date_object + timedelta(days=4)
-        end_date = end_date_object.strftime("%d-%m-%Y")
-
+        try:
+            start_date_object = datetime.strptime(start_date, "%d-%m-%Y").date()
+            end_date_object = start_date_object + timedelta(days=4)
+            end_date = end_date_object.strftime("%d-%m-%Y")
+        except ValueError as e:
+            raise ValueError('Wrong date format')
         async with aiosqlite.connect(self.db) as conn:
             cur = await conn.cursor()
 
@@ -687,7 +689,7 @@ class Service:
             result = await cur.fetchone()
 
             if result:
-                raise ObjectExistsInDBError(result)
+                raise ObjectExistsInDBError(f'Clan battle with name {result[1]} already exists')
 
             await cur.execute(""" INSERT INTO ClanBattle(name, lap, tier, start_date, end_date, active, clan_id) 
                                 VALUES (:name,:lap,:tier,:start_date,:end_date,:active,:clan_id) """,
@@ -755,7 +757,7 @@ class Service:
             result = await cur.fetchone()
 
         if not result:
-            return None
+            raise NoActiveCBError('There is no active clan battle')
 
         return ClanBattle(result[0], result[1], result[7], result[4], result[5], result[6], lap=result[2],
                           tier=result[3])
@@ -935,7 +937,7 @@ class Service:
         return tuple(
             [(PlayerCBDayInfo(result[0], result[6], result[7], result[8], overflow=result[1], ovf_time=result[2],
                               ovf_comp=result[3], hits=result[4], reset=result[5]),
-              Player(result[8], result[9], result[10])) for result in
+              Player(result[8], result[10], result[11])) for result in
              results])
 
     async def update_pcdi(self, pcdi: PlayerCBDayInfo) -> PlayerCBDayInfo:
@@ -951,11 +953,10 @@ class Service:
         async with aiosqlite.connect(self.db) as conn:
             cur = await conn.cursor()
 
-            await cur.execute(""" UPDATE PlayerCBDayInfo SET overflow=:overflow,ovf_time=:ovf_time,hits=:hits,reset=:reset,
-                            cb_day=:cb_day WHERE id=:id """,
-                              {'overflow': pcdi.overflow, 'ovf_time': pcdi.ovf_time, 'hits': pcdi.hits,
-                               'reset': pcdi.reset,
-                               'cb_day': pcdi.cb_day, 'id': pcdi.pcbdi_id})
+            await cur.execute("""UPDATE PlayerCBDayInfo SET overflow=:overflow,ovf_time=:ovf_time,ovf_comp=:ovf_comp,
+                              hits=:hits,reset=:reset,cb_day=:cb_day WHERE id=:id """,
+                              {'overflow': pcdi.overflow, 'ovf_time': pcdi.ovf_time, 'ovf_comp': pcdi.ovf_comp,
+                                'hits': pcdi.hits,'reset': pcdi.reset, 'cb_day': pcdi.cb_day, 'id': pcdi.pcbdi_id})
             await conn.commit()
             await cur.execute("SELECT * FROM PlayerCBDayInfo WHERE id=:id", {'id': pcdi.pcbdi_id})
             updated_result = await cur.fetchone()
@@ -993,7 +994,11 @@ class Service:
 
         async with aiosqlite.connect(self.db) as conn:
             cur = await conn.cursor()
-
+            await cur.execute("SELECT * FROM TeamComposition WHERE name=:name AND pcdi_id=:id",
+                              {'id': pcdi_id, 'name': name})
+            result = await cur.fetchone()
+            if result:
+                raise ObjectExistsInDBError(f'You have created team composition {name} already for today')
             await cur.execute(""" INSERT INTO TeamComposition(name, used, pcdi_id) VALUES (:name, :used, :pcdi_id) """,
                               {'name': name, 'pcdi_id': pcdi_id, 'used': used})
             tc = TeamComposition(cur.lastrowid, name, used, pcdi_id)
@@ -1122,7 +1127,7 @@ class Service:
             result = await cur.fetchone()
 
         if not result:
-            return None
+            raise ObjectDoesntExistsInDBError('Boss doesnt exists for this cb')
 
         return Boss(result[0], result[1], result[2], result[3], result[4], result[5])
 

@@ -108,21 +108,23 @@ class ClanGroup(app_commands.Group):
             user_roles = interaction.user.roles
             roles = await self.service.get_guild_admin(guild_id)
             roles += await self.service.get_guild_lead(guild_id)
+            clan_player = None
             for user_role in user_roles:
                 for role in roles:
                     if user_role.id == role[2]:
                         player_to_add = await self.service.get_player_by_name(player)
                         clan_to_join = await self.service.get_clan_by_name(clan)
-                        await self.service.add_player_to_clan(clan_to_join.clan_id, player_to_add.player_id)
+                        clan_player = await self.service.add_player_to_clan(clan_to_join.clan_id, player_to_add.player_id)
                         await interaction.response.send_message(f"Added **{player}** to clan: **{clan}**.")
                         break
                 else:
                     continue
                 # This will be executed only if the inner loop was terminated by break
                 break
-            
-            await interaction.response.send_message(f"You don't have permission to use this command!")
-        except (ObjectDoesntExistsInDBError, ObjectExistsInDBError, ParameterIsNullError, PlayerAlreadyInClanError, TableEntryDoesntExistsError) as e:
+            if not clan_player:
+                await interaction.response.send_message(f"You don't have permission to use this command!")
+        except (ObjectDoesntExistsInDBError, ObjectExistsInDBError, ParameterIsNullError, PlayerAlreadyInClanError,
+                TableEntryDoesntExistsError) as e:
             await interaction.response.send_message(e)
 
     @app_commands.command(description="Join clan")
