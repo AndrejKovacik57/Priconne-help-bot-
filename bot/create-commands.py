@@ -25,35 +25,19 @@ class CreateGroup(app_commands.Group):
             if not guild:
                 raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
             user_roles = interaction.user.roles
-            guild_admins = await self.service.get_guild_admin(guild_id)
+            roles = await self.service.get_guild_admin(guild_id)
+            roles += await self.service.get_guild_lead(guild_id)
             for user_role in user_roles:
-                for guild_admin in guild_admins:
-                    if user_role.id == guild_admin[2]:
+                for role in roles:
+                    if user_role.id == role[2]:
                         clan = await self.service.create_clan(clan_name, guild_id)
                         await interaction.response.send_message(f"Created clan: **{clan.name}**")
-                        return
-            guild_leads = await self.service.get_guild_lead(guild_id)
-            for user_role in user_roles:
-                for guild_lead in guild_leads:
-                    if user_role.id == guild_lead[2]:
-                        clan = await self.service.create_clan(clan_name, guild_id)
-                        await interaction.response.send_message(f"Created clan: **{clan.name}**")
-                        return
+                        break
+                else:
+                    continue
+                # This will be executed only if the inner loop was terminated by break
+                break
             
-        except (ObjectExistsInDBError, TableEntryDoesntExistsError) as e:
-            await interaction.response.send_message(e)
-
-    @app_commands.command(description="Create clan role")
-    @app_commands.describe(role_name="Role to create")
-    async def role(self, interaction: discord.Interaction, role_name: str):
-        """ Create clan role """
-        try:
-            guild = await self.service.get_guild_by_id(interaction.guild.id)
-            if not guild:
-                raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
-            clan = await self.service.get_clan_by_guild(interaction.guild_id)
-            role = await self.service.create_clan_role(role_name, clan.clan_id)
-            await interaction.response.send_message(f"Created \n{role}")
         except (ObjectExistsInDBError, TableEntryDoesntExistsError) as e:
             await interaction.response.send_message(e)
 

@@ -8,7 +8,6 @@ cur.execute("""DROP TABLE IF EXISTS GuildAdmin""")
 cur.execute("""DROP TABLE IF EXISTS GuildLead""")
 cur.execute("""DROP TABLE IF EXISTS Clan""")
 cur.execute("""DROP TABLE IF EXISTS Role""")
-cur.execute("""DROP TABLE IF EXISTS ClanRole""")
 cur.execute("""DROP TABLE IF EXISTS Player""")
 cur.execute("""DROP TABLE IF EXISTS ClanPlayer""")
 cur.execute("""DROP TABLE IF EXISTS ClanBattle""")
@@ -60,32 +59,19 @@ cur.execute("""
     """)
 
 cur.execute("""
-        CREATE TABLE ClanRole (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            clan_role TEXT NULL,
-            clan_id INTEGER NOT NULL,
-            FOREIGN KEY (clan_id) REFERENCES Clan(id)
-        )
-    """)
-
-cur.execute("""
         CREATE TABLE Player (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            discord_id INTEGER NOT NULL
+            name TEXT NOT NULL UNIQUE,
+            discord_id INTEGER NOT NULL 
         )
     """)
 
 cur.execute("""
         CREATE TABLE ClanPlayer (
             clan_id INTEGER NOT NULL,
-            clan_name TEXT NOT NULL,
             player_id INTEGER NOT NULL,
-            player_name TEXT NOT NULL,
             FOREIGN KEY (clan_id) REFERENCES Clan(id), 
-            FOREIGN KEY (clan_name) REFERENCES Clan(name),
-            FOREIGN KEY (player_id) REFERENCES Player(id),
-            FOREIGN KEY (player_name) REFERENCES Player(name)
+            FOREIGN KEY (player_id) REFERENCES Player(id)
         )
     """)
 

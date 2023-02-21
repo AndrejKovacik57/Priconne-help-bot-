@@ -42,17 +42,13 @@ class Player:
 
 
 class ClanPlayer:
-    def __init__(self, clan_id, clan_name, player_id, player_name,):
+    def __init__(self, clan_id, player_id):
         self.clan_id = clan_id
-        self.clan_name = clan_name
         self.player_id = player_id
-        self.player_name = player_name
 
     def __str__(self):
         return (f"Clan ID: {self.clan_id}\n"
-                f"Clan: {self.clan_name}\n"
-                f"Player ID: {self.player_id}\n"
-                f"Player Name: {self.player_name}\n")
+                f"Player ID: {self.player_id}\n")
 
 
 class ClanRole:

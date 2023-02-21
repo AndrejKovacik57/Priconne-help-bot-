@@ -4,8 +4,7 @@ from exceptions.exceptions import ParameterIsNullError, ObjectExistsInDBError, T
     ObjectDoesntExistsInDBError, PlayerAlreadyInClanError, PlayerNotInClanError, ThereIsAlreadyActiveCBError, \
     DesiredBossIsDeadError, CantBookDeadBossError
 from db_model.table_classes import Clan, Player, ClanPlayer, ClanBattle, PlayerCBDayInfo, TeamComposition, Boss, \
-    BossBooking, \
-    ClanRole, Guild, GuildRole
+    BossBooking, Guild, GuildRole
 from datetime import datetime, timedelta
 
 
@@ -44,14 +43,14 @@ class Service:
 
             await cur.execute(""" SELECT * FROM Guild WHERE server_id=:server_id """, {'server_id': guild_id})
             result = await cur.fetchone()
-            
+
         if not result:
             return None
             # raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
 
         return Guild(result[0])
 
-    async def add_admin_role(self, guild_id: int, role_id: int) :
+    async def add_admin_role(self, guild_id: int, role_id: int):
         """ Insert a new admin role into the GuildAdmin table. """
         if not guild_id:
             raise ParameterIsNullError("Guild id can't be empty!")
@@ -65,27 +64,27 @@ class Service:
             cur = await conn.cursor()
 
             await cur.execute(""" SELECT * FROM GuildAdmin WHERE role_id=:role_id and guild_id=:guild_id """,
-                              { 'role_id': role_id, 'guild_id': guild_id})
+                              {'role_id': role_id, 'guild_id': guild_id})
             result = await cur.fetchone()
 
             if result:
                 raise ObjectExistsInDBError("Role is already setup!")
 
             await cur.execute(""" INSERT INTO GuildAdmin(role_id, guild_id) VALUES (:role_id, :guild_id) """,
-                              { 'role_id': role_id, 'guild_id': guild_id})
-            
+                              {'role_id': role_id, 'guild_id': guild_id})
+
             guild_role = GuildRole(guild_id, role_id)
 
             await conn.commit()
 
         return guild_role
-    
-    async def remove_admin_role(self, guild_id: int, role_id: int) :
+
+    async def remove_admin_role(self, guild_id: int, role_id: int):
         """ Remove admin role from server """
 
         if not guild_id:
             raise ParameterIsNullError("Guild id can't be empty!")
-        
+
         guild = await self.get_guild_by_id(guild_id)
         if not guild:
             raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
@@ -95,16 +94,16 @@ class Service:
 
         async with aiosqlite.connect(self.db) as conn:
             cur = await conn.cursor()
-            await cur.execute(""" SELECT * FROM GuildAdmin WHERE role_id=:role_id and guild_id=:guild_id """, 
-                { 'role_id': role_id, 'guild_id': guild_id })
+            await cur.execute(""" SELECT * FROM GuildAdmin WHERE role_id=:role_id and guild_id=:guild_id """,
+                              {'role_id': role_id, 'guild_id': guild_id})
             result = await cur.fetchone()
             if not result:
                 raise TableEntryDoesntExistsError("Role is not registered as an admin!")
             await cur.execute(""" DELETE FROM GuildAdmin WHERE role_id = ? and guild_id = ? """, (role_id, guild_id))
             await conn.commit()
         return True
-    
-    async def add_lead_role(self, guild_id: int, role_id: int) :
+
+    async def add_lead_role(self, guild_id: int, role_id: int):
         """ Insert a new lead role into the GuildLead table. """
         if not guild_id:
             raise ParameterIsNullError("Guild id can't be empty!")
@@ -118,27 +117,27 @@ class Service:
             cur = await conn.cursor()
 
             await cur.execute(""" SELECT * FROM GuildLead WHERE role_id=:role_id and guild_id=:guild_id """,
-                              { 'role_id': role_id, 'guild_id': guild_id})
+                              {'role_id': role_id, 'guild_id': guild_id})
             result = await cur.fetchone()
 
             if result:
                 raise ObjectExistsInDBError("Role is already setup!")
 
             await cur.execute(""" INSERT INTO GuildLead(role_id, guild_id) VALUES (:role_id, :guild_id) """,
-                              { 'role_id': role_id, 'guild_id': guild_id})
-            
+                              {'role_id': role_id, 'guild_id': guild_id})
+
             guild_role = GuildRole(guild_id, role_id)
 
             await conn.commit()
 
         return guild_role
-    
-    async def remove_lead_role(self, guild_id: int, role_id: int) :
+
+    async def remove_lead_role(self, guild_id: int, role_id: int):
         """ Remove lead role from server """
 
         if not guild_id:
             raise ParameterIsNullError("Guild id can't be empty!")
-        
+
         guild = await self.get_guild_by_id(guild_id)
         if not guild:
             raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
@@ -150,7 +149,7 @@ class Service:
             cur = await conn.cursor()
 
             await cur.execute(""" SELECT * FROM GuildLead WHERE role_id=:role_id and guild_id=:guild_id """,
-                              { 'role_id': role_id, 'guild_id': guild_id })
+                              {'role_id': role_id, 'guild_id': guild_id})
             result = await cur.fetchone()
 
             if not result:
@@ -175,12 +174,13 @@ class Service:
             results = await cur.fetchall()
 
         if not results:
-            raise TableEntryDoesntExistsError("There are no roles set up for your server! Please run **/server addadminrole**")
-        
+            raise TableEntryDoesntExistsError(
+                "There are no roles set up for your server! Please run **/server addadminrole**")
+
         guild_role_array = [result for result in results]
 
         return guild_role_array
-    
+
     async def get_guild_lead(self, guild_id: int) -> list:
         """ Gets lead roles for server """
         if not guild_id:
@@ -196,8 +196,9 @@ class Service:
             results = await cur.fetchall()
 
         if not results:
-            raise TableEntryDoesntExistsError("There are no roles set up for your server! Please run **/server addadminrole** and/or **/server addleadrole**")
-        
+            raise TableEntryDoesntExistsError(
+                "There are no roles set up for your server! Please run **/server addadminrole** and/or **/server addleadrole**")
+
         guild_role_array = [result for result in results]
 
         return guild_role_array
@@ -249,7 +250,6 @@ class Service:
         """ Gets Clan by name """
         if not clan_name:
             raise ParameterIsNullError("Clan name can't be empty")
-
         async with aiosqlite.connect(self.db) as conn:
             cur = await conn.cursor()
 
@@ -283,7 +283,7 @@ class Service:
             cur = await conn.cursor()
             await cur.execute(""" SELECT * FROM Clan """)
             results = await cur.fetchall()
-        
+
         clan_array = [result for result in results]
 
         return clan_array
@@ -323,107 +323,34 @@ class Service:
             await cur.execute("SELECT * FROM Clan WHERE id=:id", {'id': clan.clan_id})
             updated_result = await cur.fetchone()
         return Clan(updated_result[0], updated_result[1], updated_result[2])
-    
-    async def update_clan_name(self, clan: str, new_name: str) -> Clan:
-        """ Update clan table """
-        if not clan:
-            raise ParameterIsNullError("Clan name can't be empty!")
-        if not new_name:
-            raise ParameterIsNullError("New clan name can't be empty!")
-        clan_to_be_updated = await self.get_clan_by_name(clan)
-        if not clan_to_be_updated:
-            raise TableEntryDoesntExistsError("Clan doesn't exist!")
 
-        async with aiosqlite.connect(self.db) as conn:
-            cur = await conn.cursor()
-            if clan_to_be_updated.name != new_name:
-                await cur.execute(""" SELECT * FROM Clan WHERE name=:name """, {'name': new_name})
-                result = await cur.fetchone()
+    # async def update_clan_name(self, clan: str, new_name: str) -> Clan:
+    #     """ Update clan table """
+    #     if not clan:
+    #         raise ParameterIsNullError("Clan name can't be empty!")
+    #     if not new_name:
+    #         raise ParameterIsNullError("New clan name can't be empty!")
+    #     clan_to_be_updated = await self.get_clan_by_name(clan)
+    #     if not clan_to_be_updated:
+    #         raise TableEntryDoesntExistsError("Clan doesn't exist!")
+    #
+    #     async with aiosqlite.connect(self.db) as conn:
+    #         cur = await conn.cursor()
+    #         if clan_to_be_updated.name != new_name:
+    #             await cur.execute(""" SELECT * FROM Clan WHERE name=:name """, {'name': new_name})
+    #             result = await cur.fetchone()
+    #
+    #             if result:
+    #                 raise ObjectExistsInDBError("Clan with that name already exists!")
+    #
+    #         await cur.execute(""" UPDATE Clan SET name=:new_name WHERE name=:name """,
+    #                           {'new_name': new_name, 'name': clan})
+    #         await conn.commit()
+    #         await cur.execute("SELECT * FROM Clan WHERE name=:name", {'name': new_name})
+    #         updated_result = await cur.fetchone()
+    #     return Clan(updated_result[0], updated_result[1], updated_result[2])
 
-                if result:
-                    raise ObjectExistsInDBError("Clan with that name already exists!")
-
-            await cur.execute(""" UPDATE Clan SET name=:new_name WHERE name=:name """,
-                              {'new_name': new_name, 'name': clan})
-            await conn.commit()
-            await cur.execute("SELECT * FROM Clan WHERE name=:name", {'name':new_name})
-            updated_result = await cur.fetchone()
-        return Clan(updated_result[0], updated_result[1], updated_result[2])
-
-    def delete_clan(self):
-        # TODO: if implemented i need to create delete function of others tables and delete those before Clan table
-        pass
-
-    async def create_clan_role(self, role_name: str, clan_id: int) -> ClanRole:
-        """ Insert a new Clan role into the Clan role table. """
-        if not role_name:
-            raise ParameterIsNullError("Role name cant be empty")
-
-        clan = await self.get_clan_by_id(clan_id)
-
-        if not clan:
-            raise ObjectDoesntExistsInDBError(f'Clan with id {clan_id} doesnt exist')
-
-        async with aiosqlite.connect(self.db) as conn:
-            cur = await conn.cursor()
-
-            await cur.execute(""" SELECT * FROM ClanRole WHERE  clan_role=:clan_role AND clan_id=:clan_id""",
-                              {'clan_role': role_name, 'clan_id': clan_id})
-            result = await cur.fetchone()
-            if result:
-                raise ObjectExistsInDBError(result)
-
-            await cur.execute(""" INSERT INTO ClanRole(clan_role, clan_id) VALUES (:clan_role,:clan_id) """,
-                              {'clan_role': role_name, 'clan_id': clan_id})
-
-            clan_role = ClanRole(cur.lastrowid, role_name, clan_id)
-
-            await conn.commit()
-        return clan_role
-
-    async def get_clan_role_by_id(self, clan_role_id: int) -> ClanRole or None:
-        """ Gets Clan role by Id """
-        if not clan_role_id:
-            raise ParameterIsNullError("Clan role id cant be empty")
-
-        async with aiosqlite.connect(self.db) as conn:
-            cur = await conn.cursor()
-
-            await cur.execute(""" SELECT * FROM ClanRole WHERE id=:id """, {'id': clan_role_id})
-            result = await cur.fetchone()
-
-        if not result:
-            return None
-
-        return ClanRole(result[0], result[1], result[2])
-
-    async def get_clan_role_by_name_and_clan_id(self, clan_role_name: str, clan_id: int) -> ClanRole or None:
-        """ Gets Clan role by name """
-        if not clan_role_name:
-            raise ParameterIsNullError("Clan role name cant be empty")
-
-        async with aiosqlite.connect(self.db) as conn:
-            cur = await conn.cursor()
-
-            await cur.execute(""" SELECT * FROM ClanRole WHERE clan_role=:name AND clan_id=:clan_id""",
-                              {'name': clan_role_name, 'clan_id': clan_id})
-            result = await cur.fetchone()
-
-        if not result:
-            return None
-
-        return ClanRole(result[0], result[1], result[2])
-
-    async def get_clan_roles_by_clan_id(self, clan_id: int) -> list:
-        """ Gets all clan roles in clan """
-        async with aiosqlite.connect(self.db) as conn:
-            cur = await conn.cursor()
-            await cur.execute(""" SELECT * FROM ClanRole WHERE clan_id=:clan_id""", {'clan_id': clan_id})
-            results = await cur.fetchall()
-
-        return [ClanRole(result[0], result[1], result[2]) for result in results]
-
-    async def create_player(self, player_name: str, dis_id: int, clan_id=0, clan_role_id=0) -> Player:
+    async def create_player(self, player_name: str, dis_id: int, clan_id=0) -> Player:
         """ Insert a new Player into the Player table. Can add player to clan and give role to player"""
         if not (player_name and dis_id):
             raise ParameterIsNullError("Clan name, discord_id cant be empty")
@@ -433,8 +360,8 @@ class Service:
             await cur.execute(""" 
                         SELECT *
                         FROM Player 
-                        WHERE name=:name"""
-                              , {'name': player_name}
+                        WHERE name=:player_name"""
+                              , {'player_name': player_name}
                               )
             result = await cur.fetchone()
 
@@ -447,43 +374,30 @@ class Service:
                               )
             player_id = cur.lastrowid
             if clan_id:
-                if clan_role_id:
-                    await cur.execute(""" INSERT INTO ClanPlayer(clan_id, player_id, clan_role_id) 
-                                    VALUES (:clan_id,:player_id,:clan_role_id) """
-                                      , {'clan_id': clan_id, 'player_id': player_id, 'clan_role_id': clan_role_id})
-                else:
-                    await cur.execute(
-                        f""" INSERT INTO ClanPlayer(clan_id,player_id) VALUES ({clan_id}, {player_id}) """)
+                await cur.execute(
+                    f""" INSERT INTO ClanPlayer(clan_id,player_id) VALUES ({clan_id}, {player_id}) """)
             await conn.commit()
 
         return Player(player_id, player_name, dis_id)
 
-    async def remove_player(self, player_id: int) -> list:
+    async def remove_player_from_clan(self, player_id: int, clan_id: int) -> bool:
         """ Remove player """
-
-        player = await self.get_player_by_id(player_id)
-
-        if not player:
-            raise ObjectDoesntExistsInDBError('This player doesn\'t exist')
-        
         clan_player = await self.get_clan_player(player_id)
-        if clan_player.clan_name != "NONE":
-            async with aiosqlite.connect(self.db) as conn:
-                cur = await conn.cursor()
-                await cur.execute(""" DELETE FROM ClanPlayer WHERE clan_id = ? AND player_id = ? """, (clan_player.clan_id, player_id))
-                await conn.commit()
-                await cur.execute(""" DELETE FROM Player WHERE id = ? """, (player_id,))
-                await conn.commit()
-                return
+        if not clan_player:
+            raise ObjectDoesntExistsInDBError('This player doesn\'t exist')
+        clan = clan_player[1]
+        if clan.clan_id != clan_id:
+            raise ObjectDoesntExistsInDBError('Player is not in this clan')
 
         async with aiosqlite.connect(self.db) as conn:
             cur = await conn.cursor()
 
-            await cur.execute(""" DELETE FROM Player WHERE id = ? """, (player_id,))
+            await cur.execute(""" DELETE FROM ClanPlayer WHERE clan_id = ? AND player_id = ? """,
+                              (clan.clan_id, player_id))
+
             await conn.commit()
-        
-        return True
         # return await self.get_players_from_clan(clan_id)
+        return True
 
     async def get_player_by_id(self, player_id: int) -> Player or None:
         """ Gets Player by Id """
@@ -501,41 +415,85 @@ class Service:
 
         return Player(result[0], result[1], result[2])
 
+    async def get_player_by_id_and_clan_id(self, player_id: int, clan_id: int) -> Player or None:
+        """ Gets Player by Id and clan id """
+        if not (player_id and clan_id):
+            raise ParameterIsNullError("Player id and clan id cant be empty")
+        async with aiosqlite.connect(self.db) as conn:
+            cur = await conn.cursor()
+
+            await cur.execute(""" 
+                                SELECT p.*
+                                FROM Player p
+                                JOIN ClanPlayer cp ON p.id = cp.player_id
+                                WHERE p.id = :player_id AND cp.clan_id = :clan_id""",
+                              {'player_id': player_id, 'clan_id': clan_id})
+            result = await cur.fetchone()
+
+        if not result:
+            raise TableEntryDoesntExistsError("Player doesn't exist!")
+
+        return Player(result[0], result[1], result[2])
+
+    async def get_player_by_name_and_clan_id(self, player_name: str, clan_id: int) -> Player or None:
+        """ Gets Players by Name and clan id """
+        if not (player_name and clan_id):
+            raise ParameterIsNullError("Player name and clan id cant be empty")
+
+        async with aiosqlite.connect(self.db) as conn:
+            cur = await conn.cursor()
+
+            await cur.execute(""" 
+                                SELECT p.*
+                                FROM Player p
+                                JOIN ClanPlayer cp ON p.id = cp.player_id
+                                WHERE p.name = :player_name AND cp.clan_id = :clan_id""",
+                              {'name': player_name})
+            result = await cur.fetchone()
+        if not result:
+            return None
+        return Player(result[0], result[1], result[2])
+
+    async def get_player_by_discord_id_and_clan_id(self, discord_id: int, clan_id: int) -> list:
+        """ Gets Players by Name and clan id """
+        if not (discord_id and clan_id):
+            raise ParameterIsNullError("Discord id and clan id cant be empty")
+
+        async with aiosqlite.connect(self.db) as conn:
+            cur = await conn.cursor()
+
+            await cur.execute(""" 
+                                SELECT p.*
+                                FROM Player p
+                                JOIN ClanPlayer cp ON p.id = cp.player_id
+                                WHERE p.discord_id = :discord_id AND cp.clan_id = :clan_id""",
+                              {'discord_id': discord_id})
+            results = await cur.fetchall()
+        if not results:
+            raise ObjectDoesntExistsInDBError(
+                'You haven\'t registered with the bot! Please run **/player create** `name`.')
+
+        return [Player(result[0], result[1], result[2]) for result in results]
+
     async def get_player_by_name(self, player_name: str) -> Player or None:
-        """ Gets Player by Name """
+        """ Gets Players by Name and clan id """
         if not player_name:
             raise ParameterIsNullError("Player name cant be empty")
 
         async with aiosqlite.connect(self.db) as conn:
             cur = await conn.cursor()
 
-            await cur.execute(""" SELECT * FROM Player WHERE name=:name """, {'name': player_name})
+            await cur.execute(""" 
+                                SELECT *
+                                FROM Player                
+                                WHERE name = :player_name""",
+                              {'name': player_name})
             result = await cur.fetchone()
-
         if not result:
-            raise TableEntryDoesntExistsError("Player doesn't exist!")
-
-        return Player(result[0], result[1], result[2])
-    
-    async def get_own_player_by_name(self, player_name: str, discord_id: int) -> Player or None:
-        """ Gets Player by Name """
-        if not player_name:
-            raise ParameterIsNullError("Player name can't be empty")
-        if not discord_id:
-            raise ParameterIsNullError("Discord ID can't be empty")
-
-        async with aiosqlite.connect(self.db) as conn:
-            cur = await conn.cursor()
-
-            await cur.execute(""" SELECT * FROM Player WHERE name=:name AND discord_id=:discord_id """, { 'name': player_name, 'discord_id': discord_id })
-            result = await cur.fetchone()
-
-        if not result:
-            raise TableEntryDoesntExistsError("Player doesn't exist!")
-
+            return None
         return Player(result[0], result[1], result[2])
 
-    async def get_player_by_discord_id(self, discord_id: int) -> Player or None:
+    async def get_player_by_discord_id(self, discord_id: int) -> list:
         """ Gets Player by discord name and id """
         if not discord_id:
             raise ParameterIsNullError("Discord id cant be empty")
@@ -550,11 +508,10 @@ class Service:
             results = await cur.fetchall()
 
             if not results:
-                raise ObjectDoesntExistsInDBError('You haven\'t registered with the bot! Please run **/player create** `name`.')
-            
-        player_list = [result for result in results]
+                raise ObjectDoesntExistsInDBError(
+                    'You haven\'t registered with the bot! Please run **/player create** `name`.')
 
-        return player_list
+        return [Player(result[0], result[1], result[2]) for result in results]
 
     async def get_players(self) -> list:
         """ Gets all players """
@@ -577,7 +534,7 @@ class Service:
             results = await cur.fetchall()
 
         return [Player(result[0], result[1], result[2]) for result in results]
-    
+
     async def get_players_from_clan_name(self, clan_name: str) -> list:
         """ Gets all players from clan"""
         clan = await self.get_clan_by_name(clan_name)
@@ -606,10 +563,10 @@ class Service:
 
         async with aiosqlite.connect(self.db) as conn:
             cur = await conn.cursor()
-            if player_to_be_updated.discord_id != player.discord_id:
+            if player_to_be_updated.name != player.name:
                 await cur.execute("""
-                            SELECT * FROM Player WHERE discord_id=:discord_id"""
-                                  , {"discord_id": player.discord_id})
+                            SELECT * FROM Player WHERE name=:name"""
+                                  , {"name": player.name})
                 result = await cur.fetchone()
 
                 if result:
@@ -622,7 +579,7 @@ class Service:
             updated_result = await cur.fetchone()
         return Player(updated_result[0], updated_result[1], updated_result[2])
 
-    async def add_player_to_clan(self, clan_id: int, player_id: int, clan_role_id=0) -> tuple:
+    async def add_player_to_clan(self, clan_id: int, player_id: int) -> tuple:
         """ Add player to clan wih or without role"""
         async with aiosqlite.connect(self.db) as conn:
             cur = await conn.cursor()
@@ -656,9 +613,9 @@ class Service:
             if clan_player_result:
                 raise PlayerAlreadyInClanError('Player is in the clan')
 
-            await cur.execute(""" INSERT INTO ClanPlayer(clan_id, clan_name, player_id, player_name) 
-                            VALUES (:clan_id,:clan_name,:player_id,:player_name) """
-                                , {'clan_id': clan_id, 'clan_name': clan.name, 'player_id': player_id, 'player_name': player.name})
+            await cur.execute(""" INSERT INTO ClanPlayer(clan_id, player_id) 
+                            VALUES (:clan_id,:player_id) """
+                              , {'clan_id': clan_id, 'player_id': player_id})
 
             await conn.commit()
         # clan_role = await self.get_clan_role_by_id(clan_role_id)
@@ -689,7 +646,7 @@ class Service:
             await conn.commit()
         return await self.get_players_from_clan(clan_id)
 
-    async def get_clan_player(self, player_id: int) -> ClanPlayer:
+    async def get_clan_player(self, player_id: int) -> tuple or None:
         """ get clanplayer """
         player = await self.get_player_by_id(player_id)
 
@@ -698,15 +655,18 @@ class Service:
 
         async with aiosqlite.connect(self.db) as conn:
             cur = await conn.cursor()
-            await cur.execute(""" SELECT * FROM ClanPlayer WHERE player_id=:player_id """,
+            await cur.execute(""" 
+                                SELECT p.*, c.*
+                                FROM Player p
+                                JOIN ClanPlayer cp ON p.id = cp.player_id
+                                JOIN Clan c ON cp.clan_id = c.id
+                                WHERE p.id = :player_id""",
                               {'player_id': player_id})
             result = await cur.fetchone()
+        if not result:
+            return None
 
-            if not result:
-                return ClanPlayer("", "NONE", "", player.name)
-
-            await conn.commit()
-        return ClanPlayer(result[0], result[1], result[2], result[3])
+        return Player(result[0], result[1], result[2]), Clan(result[3], result[4], result[5])
 
     async def create_clan_battle(self, clan_id: int, cb_name: str, start_date: str) -> ClanBattle:
         """ Insert a new cb into the CB table.
@@ -1267,7 +1227,7 @@ class Service:
             return None
 
         return BossBooking(result[0], result[1], result[4], result[5], result[6], overflow=result[2],
-                            ovf_time=result[3])
+                           ovf_time=result[3])
 
     async def get_boss_bookings_by_player_id(self, player_id: int) -> list:
         """ Gets boss bookings by player Id """
@@ -1317,11 +1277,11 @@ class Service:
             results = await cur.fetchall()
 
         return tuple([(
-                BossBooking(result[0], result[1], result[4], result[5], result[6], overflow=result[2],
-                            ovf_time=result[3]),
-                Boss(result[7], result[8], result[9], result[10], result[1], result[12]),
-                Player(result[13], result[14], result[15])
-            ) for result in results])
+            BossBooking(result[0], result[1], result[4], result[5], result[6], overflow=result[2],
+                        ovf_time=result[3]),
+            Boss(result[7], result[8], result[9], result[10], result[1], result[12]),
+            Player(result[13], result[14], result[15])
+        ) for result in results])
 
     async def update_boss_booking(self, bb: BossBooking) -> BossBooking:
         """ Update boss booking"""
@@ -1355,5 +1315,4 @@ class Service:
             updated_result = await cur.fetchone()
 
         return BossBooking(updated_result[0], updated_result[1], updated_result[4], updated_result[5],
-                           updated_result[6], overflow=updated_result[2],  ovf_time=updated_result[3])
-
+                           updated_result[6], overflow=updated_result[2], ovf_time=updated_result[3])
