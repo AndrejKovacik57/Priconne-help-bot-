@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 import re
 from bs4 import BeautifulSoup
 from fake_useragent import UserAgent  # pip install fake-useragent
