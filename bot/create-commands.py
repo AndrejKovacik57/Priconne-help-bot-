@@ -48,7 +48,7 @@ class CreateGroup(app_commands.Group):
     async def player(self, interaction: discord.Interaction, player_name: str):
         """ Create player """
         try:
-            guild = await self.service.get_guild_by_id(interaction.guild.id)
+            await self.service.get_guild_by_id(interaction.guild.id)
             player = await self.service.create_player(player_name, interaction.user.id)
             await interaction.response.send_message(f"Created player: **{player.name}**")
 

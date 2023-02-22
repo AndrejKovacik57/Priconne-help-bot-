@@ -1,5 +1,4 @@
-from datetime import datetime, timedelta
-import pytz
+from datetime import datetime, timedelta, timezone
 import re
 from bs4 import BeautifulSoup
 from fake_useragent import UserAgent  # pip install fake-useragent
@@ -12,11 +11,11 @@ user_agent = UserAgent(browsers=["chrome", "edge", "firefox", "safari", "opera"]
 
 
 def get_cb_day(cb):
-    utc = pytz.UTC  # Create a UTC timezone object
-    current_time_object = datetime.now(tz=utc).date()
-    start_date_object = datetime.strptime(cb.start_date, "%d-%m-%Y").date()
-    end_date_object = datetime.strptime(cb.end_date, "%d-%m-%Y").date()
-
+    current_time_object = datetime.now(tz=timezone.utc).replace(minute=0, second=0, microsecond=0)
+    current_time = current_time_object.strftime("%d-%m-%Y %H:%M:%S")
+    current_time_object = datetime.strptime(current_time, "%d-%m-%Y %H:%M:%S")
+    start_date_object = datetime.strptime(cb.start_date, "%d-%m-%Y %H:%M:%S")
+    end_date_object = datetime.strptime(cb.end_date, "%d-%m-%Y %H:%M:%S")
     if start_date_object <= current_time_object <= end_date_object:
         day_of_cb = (current_time_object - start_date_object).days + 1
         return day_of_cb

@@ -669,16 +669,18 @@ class Service:
 
         return Player(result[0], result[1], result[2]), Clan(result[3], result[4], result[5])
 
-    async def create_clan_battle(self, clan_id: int, cb_name: str, start_date: str) -> ClanBattle:
+    async def create_clan_battle(self, clan_id: int, cb_name: str, start_date_input: str) -> ClanBattle:
         """ Insert a new cb into the CB table.
             start_date: date format is DD-MM-YYY
         """
-        if not (cb_name and clan_id and start_date):
+        if not (cb_name and clan_id and start_date_input):
             raise ParameterIsNullError("Cb name, start date and clan id cant be empty")
         try:
-            start_date_object = datetime.strptime(start_date, "%d-%m-%Y").date()
+            start_date_object = datetime.strptime(start_date_input, "%d-%m-%Y").replace(hour=13, minute=0, second=0)
             end_date_object = start_date_object + timedelta(days=4)
-            end_date = end_date_object.strftime("%d-%m-%Y")
+            end_date_object = end_date_object.replace(hour=8, minute=0, second=0)
+            start_date = start_date_object.strftime("%d-%m-%Y %H:%M:%S")
+            end_date = end_date_object.strftime("%d-%m-%Y %H:%M:%S")
         except ValueError as e:
             raise ValueError('Wrong date format')
         async with aiosqlite.connect(self.db) as conn:
@@ -693,8 +695,8 @@ class Service:
 
             await cur.execute(""" INSERT INTO ClanBattle(name, lap, tier, start_date, end_date, active, clan_id) 
                                 VALUES (:name,:lap,:tier,:start_date,:end_date,:active,:clan_id) """,
-                              {'name': cb_name, 'lap': 1, 'tier': 1, 'clan_id': clan_id, 'start_date': start_date,
-                               'end_date': end_date, 'active': False})
+                              {'name': cb_name, 'lap': 1, 'tier': 1, 'clan_id': clan_id, 'start_date': start_date
+                                  , 'end_date': end_date, 'active': False})
 
             cb = ClanBattle(cur.lastrowid, cb_name, clan_id, start_date, end_date, False)
 

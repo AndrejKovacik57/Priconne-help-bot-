@@ -36,12 +36,12 @@ def run_discord_bot():
         await client.load_extension("bot.create-commands")
         await client.load_extension("bot.player-commands")
         await client.load_extension("bot.server-commands")
-        try:
-            # Don't do this. Should move elsewhere after testing is done
-            synced = await client.tree.sync()
-            print(f"Synced {len(synced)} command(s)")
-        except Exception as e:
-            print(e)
+        # try:
+        #     # Don't do this. Should move elsewhere after testing is done
+        #     synced = await client.tree.sync()
+        #     print(f"Synced {len(synced)} command(s)")
+        # except Exception as e:
+        #     print(e)
 
     ### TESTING / MISC COMMANDS ###
 
