@@ -8,6 +8,8 @@ from db_model.table_classes import Clan, Player, ClanPlayer, ClanBattle, PlayerC
     BossBooking,  ClanRole
 from datetime import datetime, timedelta
 import pytz
+from help_functions import multiple_players_check
+from typing import Optional
 
 
 class CreateGroup(app_commands.Group):
@@ -79,29 +81,29 @@ class CreateGroup(app_commands.Group):
             await interaction.response.send_message(e)
 
     @app_commands.command(description="Create team composition")
-    @app_commands.describe(tc_name="Team composition to create for current day")
-    async def team_composition(self, interaction: discord.Interaction, tc_name: str):
+    @app_commands.describe(tc_name="Team composition to create for current day", player_name='Name of your account')
+    async def team_composition(self, interaction: discord.Interaction, tc_name: str, player_name: Optional[str] = None):
         """ Create team composition """
         try:
             await self.service.get_guild_by_id(interaction.guild.id)
             clan = await self.service.get_clan_by_guild(interaction.guild_id)
             cb = await self.service.get_clan_battle_active_by_clan_id(clan.clan_id)
             players = await self.service.get_player_by_discord_id(interaction.user.id)
-            if len(players) == 1:
-                player = players[0]
-                utc = pytz.UTC  # Create a UTC timezone object
-                current_time_object = datetime.now(tz=utc).date()
-                start_date_object = datetime.strptime(cb.start_date, "%d-%m-%Y").date()
-                end_date_object = datetime.strptime(cb.end_date, "%d-%m-%Y").date()
-                if start_date_object <= current_time_object <= end_date_object:
-                    day_of_cb = (current_time_object - start_date_object).days + 1
+            player = multiple_players_check(player_name, players)
 
-                    pcdi = await self.service.get_pcdi_by_player_id_and_cb_id_and_day(player.player_id, cb.cb_id, day_of_cb)
-                    tc = await self.service.create_team_composition(tc_name, pcdi.pcbdi_id)
+            utc = pytz.UTC  # Create a UTC timezone object
+            current_time_object = datetime.now(tz=utc).date()
+            start_date_object = datetime.strptime(cb.start_date, "%d-%m-%Y").date()
+            end_date_object = datetime.strptime(cb.end_date, "%d-%m-%Y").date()
+            if start_date_object <= current_time_object <= end_date_object:
+                day_of_cb = (current_time_object - start_date_object).days + 1
 
-                    await interaction.response.send_message(f"Created team compositon: {tc.name}")
-                else:
-                    await interaction.response.send_message(f"Today is not cb day")
+                pcdi = await self.service.get_pcdi_by_player_id_and_cb_id_and_day(player.player_id, cb.cb_id, day_of_cb)
+                tc = await self.service.create_team_composition(tc_name, pcdi.pcbdi_id)
+
+                await interaction.response.send_message(f"Created team compositon: {tc.name}")
+            else:
+                await interaction.response.send_message(f"Today is not cb day")
 
         except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDaysError, ValueError, TableEntryDoesntExistsError,
                 NoActiveCBError) as e:
