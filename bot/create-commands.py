@@ -8,7 +8,7 @@ from db_model.table_classes import Clan, Player, ClanPlayer, ClanBattle, PlayerC
     BossBooking,  ClanRole
 from datetime import datetime, timedelta
 import pytz
-from help_functions import multiple_players_check
+from .help_functions import multiple_players_check
 from typing import Optional
 
 

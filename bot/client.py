@@ -6,7 +6,7 @@ from exceptions.exceptions import ParameterIsNullError, ObjectExistsInDBError, T
 import json
 import os
 from service.service import Service
-from help_functions import get_cb_day, hit_kill, multiple_players_check, update_lap_and_tier, scrape_clan_rankings, \
+from .help_functions import get_cb_day, hit_kill, multiple_players_check, update_lap_and_tier, scrape_clan_rankings, \
     boss_char_by_lap, book_boss_help
 from typing import Optional
 
@@ -36,12 +36,12 @@ def run_discord_bot():
         await client.load_extension("bot.create-commands")
         await client.load_extension("bot.player-commands")
         await client.load_extension("bot.server-commands")
-        # try:
-        #     # Don't do this. Should move elsewhere after testing is done
-        #     synced = await client.tree.sync()
-        #     print(f"Synced {len(synced)} command(s)")
-        # except Exception as e:
-        #     print(e)
+        try:
+            # Don't do this. Should move elsewhere after testing is done
+            synced = await client.tree.sync()
+            print(f"Synced {len(synced)} command(s)")
+        except Exception as e:
+            print(e)
 
     ### TESTING / MISC COMMANDS ###
 
