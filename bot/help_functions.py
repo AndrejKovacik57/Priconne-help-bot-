@@ -49,15 +49,15 @@ async def update_lap_and_tier(service, interaction, cb, pcdi):
         if cb.lap == tier2_lap:
             boss_tier = 2
             boss_char = 'B'
-            await update_bosses_when_tier_change(cb, boss_char, boss_tier)
+            await update_bosses_when_tier_change(service, cb, boss_char, boss_tier)
         elif cb.lap == tier3_lap:
             boss_tier = 3
             boss_char = 'C'
-            await update_bosses_when_tier_change(cb, boss_char, boss_tier)
+            await update_bosses_when_tier_change(service, cb, boss_char, boss_tier)
         elif cb.lap == tier4_lap:
             boss_tier = 4
             boss_char = 'D'
-            await update_bosses_when_tier_change(cb, boss_char, boss_tier)
+            await update_bosses_when_tier_change(service, cb, boss_char, boss_tier)
         else:
             boss = await service.get_boss_by_boss_number(1, cb.cb_id)
             boss.active = True
