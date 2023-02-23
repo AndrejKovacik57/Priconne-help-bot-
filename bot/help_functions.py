@@ -131,7 +131,7 @@ async def hit_kill(service, interaction, player_discord_id, tc_name, player_name
 
                     pcdi = await service.update_pcdi(pcdi)
 
-                    return await update_lap_and_tier(interaction, cb, pcdi)
+                    return await update_lap_and_tier(service, interaction, cb, pcdi)
                 else:
                     await service.update_pcdi(pcdi)
                     return await interaction.response.send_message(f"You recorded your hit with: {tc.name}")
