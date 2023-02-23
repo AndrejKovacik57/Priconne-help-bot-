@@ -204,13 +204,13 @@ class Service:
 
     async def create_clan(self, clan_name: str, guild_id: int) -> Clan:
         """ Insert a new Clan into the Clan table. """
-        if not clan_name:
-            raise ParameterIsNullError("Clan name cant be empty")
-        if not guild_id:
-            raise ParameterIsNullError("Guild id can't be empty!")
+        if not (clan_name and guild_id):
+            raise ParameterIsNullError("Clan name, Guild id cant be empty")
+
         guild = await self.get_guild_by_id(guild_id)
         if not guild:
             raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
+
         async with aiosqlite.connect(self.db) as conn:
             cur = await conn.cursor()
 
@@ -379,24 +379,31 @@ class Service:
 
         return Player(player_id, player_name, dis_id)
 
-    async def remove_player_from_clan(self, player_id: int, clan_id: int) -> bool:
-        """ Remove player """
-        clan_player = await self.get_clan_player(player_id)
-        if not clan_player:
+    async def remove_player_from_clan(self, clan_id: int, player_id: int) -> list:
+        """ Remove player from clan """
+
+        clan = await self.get_clan_by_id(clan_id)
+
+        if not clan:
+            raise ObjectDoesntExistsInDBError('This clan doesn\'t exist')
+
+        player = await self.get_player_by_id(player_id)
+
+        if not player:
             raise ObjectDoesntExistsInDBError('This player doesn\'t exist')
-        clan = clan_player[1]
-        if clan.clan_id != clan_id:
-            raise ObjectDoesntExistsInDBError('Player is not in this clan')
 
         async with aiosqlite.connect(self.db) as conn:
             cur = await conn.cursor()
+            await cur.execute(""" SELECT * FROM ClanPlayer WHERE clan_id=:clan_id AND player_id=:player_id """,
+                              {'player_id': player_id, 'clan_id': clan_id})
+            clan_player_result = await cur.fetchone()
 
-            await cur.execute(""" DELETE FROM ClanPlayer WHERE clan_id = ? AND player_id = ? """,
-                              (clan.clan_id, player_id))
+            if not clan_player_result:
+                raise PlayerNotInClanError('Player is not in the clan')
 
+            await cur.execute(""" DELETE FROM ClanPlayer WHERE clan_id = ? AND player_id = ? """, (clan_id, player_id))
             await conn.commit()
-        # return await self.get_players_from_clan(clan_id)
-        return True
+        return await self.get_players_from_clan(clan_id)
 
     async def get_player_by_id(self, player_id: int) -> Player or None:
         """ Gets Player by Id """
@@ -580,6 +587,19 @@ class Service:
             updated_result = await cur.fetchone()
         return Player(updated_result[0], updated_result[1], updated_result[2])
 
+    async def delete_player_by_discord_id_name(self, dis_id: int, name: str):
+        """ 'deletes' player by discord id and name (removes discord id) """
+        players = await self.get_player_by_discord_id(dis_id)
+        player = None
+        for player_iter in players:
+            if player_iter.name == name:
+                player = player_iter
+        if not player:
+            raise TableEntryDoesntExistsError(f'You dont have player with name: {name}')
+
+        player.discord_id = None
+        await self.update_player(player)
+
     async def add_player_to_clan(self, clan_id: int, player_id: int) -> tuple:
         """ Add player to clan wih or without role"""
         async with aiosqlite.connect(self.db) as conn:
@@ -621,31 +641,6 @@ class Service:
             await conn.commit()
         # clan_role = await self.get_clan_role_by_id(clan_role_id)
         return clan, player
-
-    async def remove_player_from_clan(self, clan_id: int, player_id: int) -> list:
-        """ Remove player from clan """
-
-        clan = await self.get_clan_by_id(clan_id)
-
-        if not clan:
-            raise ObjectDoesntExistsInDBError('This clan doesn\'t exist')
-
-        player = await self.get_player_by_id(player_id)
-
-        if not player:
-            raise ObjectDoesntExistsInDBError('This player doesn\'t exist')
-
-        async with aiosqlite.connect(self.db) as conn:
-            cur = await conn.cursor()
-            await cur.execute(""" SELECT * FROM ClanPlayer WHERE clan_id=:clan_id AND player_id=:player_id """,
-                              {'player_id': player_id, 'clan_id': clan_id})
-            clan_player_result = await cur.fetchone()
-
-            if not clan_player_result:
-                raise PlayerNotInClanError('Player is not in the clan')
-            await cur.execute(""" DELETE FROM ClanPlayer WHERE clan_id = ? AND player_id = ? """, (clan_id, player_id))
-            await conn.commit()
-        return await self.get_players_from_clan(clan_id)
 
     async def get_clan_player(self, player_id: int) -> tuple or None:
         """ get clanplayer """
@@ -720,6 +715,27 @@ class Service:
 
         return ClanBattle(result[0], result[1], result[7], result[4], result[5], result[6], lap=result[2],
                           tier=result[3])
+
+    async def exists_cb_in_date_by_clan_id(self, start_date_input: str, clan_id: int) -> str or None:
+        """ Gets cb by Id """
+        if not (start_date_input and clan_id):
+            raise ParameterIsNullError("Date and clan id cant be empty")
+
+        start_date_object = datetime.strptime(start_date_input, "%d-%m-%Y").replace(hour=13, minute=0, second=0)
+        start_date = start_date_object.strftime("%d-%m-%Y %H:%M:%S")
+
+        async with aiosqlite.connect(self.db) as conn:
+            cur = await conn.cursor()
+
+            await cur.execute(""" SELECT * FROM ClanBattle WHERE clan_id=:clan_id 
+                                AND :date BETWEEN start_date AND end_date; """,
+                              {'date': start_date, 'clan_id': clan_id})
+            result = await cur.fetchone()
+
+        if not result:
+            return None
+
+        return result[1]
 
     async def get_clan_battle_by_name_and_clan_id(self, name: str, clan_id: int) -> ClanBattle or None:
         """ Gets cb by name and clan id """
@@ -830,6 +846,30 @@ class Service:
         return ClanBattle(updated_result[0], updated_result[1], updated_result[7], updated_result[4], updated_result[5],
                           updated_result[6], lap=updated_result[2], tier=updated_result[3])
 
+    async def delete_clan_battle_by_name_and_clan_id(self, cb_name: str, clan_id: int):
+        """ Deletes team composition, boss bookings, boss, pcdi connected to cb and cb itself """
+        cb = await self.get_clan_battle_by_name_and_clan_id(cb_name, clan_id)
+        if not cb:
+            raise TableEntryDoesntExistsError(f'Clan battle {cb_name} doesnt exists in your clan')
+        pcdis = await self.get_pcdis_by_cb_id(cb.cb_id)
+        bosses = await self.get_bosses(cb.cb_id)
+
+        for pcdi in pcdis:
+            await self.delete_tc_by_pcdi_id(pcdi.pcbdi_id)
+        await self.delete_pcdis_by_cb_id(cb.cb_id)
+
+        for boss in bosses:
+            await self.delete_bookings_by_boss_id(boss.boss_id)
+        await self.delete_bosses_by_cb_id(cb.cb_id)
+
+        async with aiosqlite.connect(self.db) as conn:
+            cur = await conn.cursor()
+
+            await cur.execute(""" 
+                            DELETE FROM ClanBattle WHERE id=:id""",
+                              {'id': cb.cb_id})
+            await conn.commit()
+
     async def create_player_cb_day_info(self, cb_id, player_id) -> PlayerCBDayInfo:
         """ Insert a new day info in to table. """
         if not (cb_id and player_id):
@@ -875,6 +915,34 @@ class Service:
 
         return PlayerCBDayInfo(result[0], result[6], result[7], result[8], overflow=result[1], ovf_time=result[2],
                                ovf_comp=result[3], hits=result[4], reset=result[5])
+
+    async def get_pcdis_by_cb_id(self, cb_id: int) -> list:
+        """ Gets pcdis by cb id"""
+        if not cb_id:
+            raise ParameterIsNullError("Cb id cant be empty")
+
+        async with aiosqlite.connect(self.db) as conn:
+            cur = await conn.cursor()
+
+            await cur.execute("""SELECT * FROM PlayerCBDayInfo WHERE cb_id=:cb_id""", {'cb_id': cb_id})
+            results = await cur.fetchall()
+
+        return [PlayerCBDayInfo(result[0], result[6], result[7], result[8], overflow=result[1], ovf_time=result[2],
+                                ovf_comp=result[3], hits=result[4], reset=result[5]) for result in results]
+
+    async def get_pcdis_by_player_id(self, player_id: int) -> list:
+        """ Gets player by cb id"""
+        if not player_id:
+            raise ParameterIsNullError("Player id cant be empty")
+
+        async with aiosqlite.connect(self.db) as conn:
+            cur = await conn.cursor()
+
+            await cur.execute("""SELECT * FROM PlayerCBDayInfo WHERE player_id=:player_id""", {'player_id': player_id})
+            results = await cur.fetchall()
+
+        return [PlayerCBDayInfo(result[0], result[6], result[7], result[8], overflow=result[1], ovf_time=result[2],
+                                ovf_comp=result[3], hits=result[4], reset=result[5]) for result in results]
 
     async def get_pcdi_by_player_id_and_cb_id_and_day(self, player_id: int, cb_id: int, day: int) -> PlayerCBDayInfo:
         """ Gets pcdi by player id and cb id and day (optional) """
@@ -942,6 +1010,27 @@ class Service:
               Player(result[8], result[10], result[11])) for result in
              results])
 
+    async def get_pcdi_by_cb_id_and_hits(self, cb_id: int, day: int) -> tuple:
+        """ Gets players and hits left that are more then 0 """
+        if not (cb_id and day):
+            raise ParameterIsNullError("Cb id and day cant be empty")
+
+        async with aiosqlite.connect(self.db) as conn:
+            cur = await conn.cursor()
+            await cur.execute("""
+                                SELECT p.name, pcdi.hits
+                                FROM Player p
+                                JOIN PlayerCBDayInfo pcdi ON p.id = pcdi.player_id
+                                WHERE pcdi.cb_id = :cb_id AND pcdi.hits > 0 AND pcdi.cb_day=:cb_day""",
+                              {'cb_id': cb_id, 'cb_day': day})
+            results = await cur.fetchall()
+
+        return tuple(
+            [(PlayerCBDayInfo(result[0], result[6], result[7], result[8], overflow=result[1], ovf_time=result[2],
+                              ovf_comp=result[3], hits=result[4], reset=result[5]),
+              Player(result[8], result[10], result[11])) for result in
+             results])
+
     async def update_pcdi(self, pcdi: PlayerCBDayInfo) -> PlayerCBDayInfo:
         """ Update pcdi table """
         pcdi_to_be_updated = await self.get_pcdi_by_id(pcdi.pcbdi_id)
@@ -958,7 +1047,7 @@ class Service:
             await cur.execute("""UPDATE PlayerCBDayInfo SET overflow=:overflow,ovf_time=:ovf_time,ovf_comp=:ovf_comp,
                               hits=:hits,reset=:reset,cb_day=:cb_day WHERE id=:id """,
                               {'overflow': pcdi.overflow, 'ovf_time': pcdi.ovf_time, 'ovf_comp': pcdi.ovf_comp,
-                                'hits': pcdi.hits,'reset': pcdi.reset, 'cb_day': pcdi.cb_day, 'id': pcdi.pcbdi_id})
+                               'hits': pcdi.hits, 'reset': pcdi.reset, 'cb_day': pcdi.cb_day, 'id': pcdi.pcbdi_id})
             await conn.commit()
             await cur.execute("SELECT * FROM PlayerCBDayInfo WHERE id=:id", {'id': pcdi.pcbdi_id})
             updated_result = await cur.fetchone()
@@ -966,6 +1055,16 @@ class Service:
         return PlayerCBDayInfo(updated_result[0], updated_result[6], updated_result[7], updated_result[8],
                                overflow=updated_result[1], ovf_time=updated_result[2],
                                ovf_comp=updated_result[3], hits=updated_result[4], reset=updated_result[5])
+
+    async def delete_pcdis_by_cb_id(self, cb_id: int):
+        """ deletes all pcdis by cb id"""
+        async with aiosqlite.connect(self.db) as conn:
+            cur = await conn.cursor()
+
+            await cur.execute(""" 
+                            DELETE FROM PlayerCBDayInfo WHERE cb_id=:cb_id""",
+                              {'cb_id': cb_id})
+            await conn.commit()
 
     async def get_today_hits_left(self, day: int, cb_id: int) -> int or None:
         """ Gets hits left for today """
@@ -1076,6 +1175,16 @@ class Service:
 
         return TeamComposition(updated_result[0], updated_result[1], updated_result[2], updated_result[3])
 
+    async def delete_tc_by_pcdi_id(self, pcdi_id: int):
+        """ deletes all tc by pcdi id"""
+        async with aiosqlite.connect(self.db) as conn:
+            cur = await conn.cursor()
+
+            await cur.execute(""" 
+                            DELETE FROM TeamComposition WHERE pcdi_id=:pcdi_id""",
+                              {'pcdi_id': pcdi_id})
+            await conn.commit()
+
     async def create_boss(self, name: str, boss_number: int, ranking: int, cb_id: int) -> Boss:
         """ Insert a new boss into the Boss table. """
         if not (name and boss_number and cb_id):
@@ -1184,6 +1293,17 @@ class Service:
 
         return Boss(updated_result[0], updated_result[1], updated_result[2], updated_result[3], updated_result[4],
                     updated_result[5])
+
+    async def delete_bosses_by_cb_id(self, cb_id: int):
+        """ deletes all bosses by cb id"""
+        async with aiosqlite.connect(self.db) as conn:
+            cur = await conn.cursor()
+
+            await cur.execute(""" 
+                            DELETE FROM Boss WHERE cb_id=:cb_id""",
+                              {'cb_id': cb_id})
+            await conn.commit()
+
 
     async def create_boss_booking(self, lap: int, curr_lap: int, overflow: bool, comp_name: str,
                                   boss_id: int, player_id: int, cb_id: int, ovf_time='') -> BossBooking:
@@ -1323,3 +1443,13 @@ class Service:
 
         return BossBooking(updated_result[0], updated_result[1], updated_result[4], updated_result[5],
                            updated_result[6], overflow=updated_result[2], ovf_time=updated_result[3])
+
+    async def delete_bookings_by_boss_id(self, boss_id: int):
+        """ deletes all bookings by boss id """
+        async with aiosqlite.connect(self.db) as conn:
+            cur = await conn.cursor()
+
+            await cur.execute(""" 
+                            DELETE FROM BossBooking WHERE boss_id=:boss_id""",
+                              {'boss_id': boss_id})
+            await conn.commit()

@@ -62,7 +62,7 @@ cur.execute("""
         CREATE TABLE Player (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL UNIQUE,
-            discord_id INTEGER NOT NULL 
+            discord_id INTEGER NULL 
         )
     """)
 
@@ -81,8 +81,8 @@ cur.execute("""
             name TEXT NOT NULL,
             lap INTEGER NOT NULL,
             tier INTEGER NOT NULL,
-            start_date TEXT NOT NULL,
-            end_date TEXT NOT NULL,
+            start_date DATETIME NOT NULL,
+            end_date DATETIME NOT NULL,
             active INTEGER NOT NULL,
             clan_id INTEGER NOT NULL,
             FOREIGN KEY (clan_id) REFERENCES Clan(id)
@@ -97,7 +97,7 @@ cur.execute("""
             hits INTEGER NOT NULL,
             reset INTEGER NOT NULL,
             cb_day INTEGER NOT NULL,
-            player_id INTEGER NOT NULL,
+            player_id INTEGER NULL,
             cb_id INTEGER NOT NULL,
             FOREIGN KEY (player_id) REFERENCES Player(id),
             FOREIGN KEY (cb_id) REFERENCES ClanBattle(id)
@@ -132,7 +132,7 @@ cur.execute("""
             ovf_time TEXT NULL,
             comp_name TEXT NOT NULL,
             boss_id INTEGER NOT NULL,
-            player_id INTEGER NOT NULL,
+            player_id INTEGER NULL,
             FOREIGN KEY (boss_id) REFERENCES Boss(id),
             FOREIGN KEY (player_id) REFERENCES Player(id)
         )

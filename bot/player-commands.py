@@ -13,20 +13,6 @@ class PlayerGroup(app_commands.Group):
         super().__init__(*args, **kwargs)
         self.service = Service("priconne_database")
 
-    @app_commands.command(description="Delete a player")
-    @app_commands.describe(player ="Player to delete")
-    async def delete(self, interaction: discord.Interaction, player: str):
-        try:
-            # guild = await self.service.get_guild_by_id(interaction.guild.id)
-            # if not guild:
-            #     raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
-            # player = await self.service.get_player_by_discord_id(interaction.user.id)
-            #
-            # await self.service.remove_player(player.player_id)
-            # await interaction.response.send_message(f"Successfully deleted **{player}**")
-            await interaction.response.send_message(f"Function out of service")
-        except TableEntryDoesntExistsError as e:
-            await interaction.response.send_message(e)
     #
     # async def player_names_autocomplete(self, interaction: discord.Interaction,
     #                                     current: str) -> list:

@@ -62,6 +62,10 @@ class CreateGroup(app_commands.Group):
         try:
             await self.service.get_guild_by_id(interaction.guild.id)
             clan = await self.service.get_clan_by_guild(interaction.guild_id)
+            exists = await self.service.exists_cb_in_date_by_clan_id(start_date, clan.clan_id)
+            if exists:
+                error_message = f'Cant create clan battle because there is clan battle at this date: {exists}'
+                await interaction.response.send_message(error_message)
             cb = await self.service.create_clan_battle(clan.clan_id, cb_name, start_date)
             clan_players = await self.service.get_players_from_clan(clan.clan_id)
 
