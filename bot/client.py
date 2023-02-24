@@ -163,7 +163,7 @@ def run_discord_bot():
         """ Record hit on boss """
         try:
             await service.get_guild_by_id(interaction.guild.id)
-            await hit_kill(service, interaction, interaction.user.id, comp, player_name)
+            await hit_kill(service, interaction, comp, player_name)
         except (TableEntryDoesntExistsError, ValueError) as e:
             await interaction.response.send_message(e)
 
@@ -183,7 +183,7 @@ def run_discord_bot():
             if clan_player_clan.clan_id != clan.clan_id:
                 raise TableEntryDoesntExistsError(f'Player {piloted_player_name} is not in clan.')
 
-            await hit_kill(service, interaction, player.discord_id, comp, piloted_player_name)
+            await hit_kill(service, interaction, comp, piloted_player_name)
         except (TableEntryDoesntExistsError, PlayerNotInClanError, ValueError) as e:
             await interaction.response.send_message(e)
 
@@ -193,7 +193,7 @@ def run_discord_bot():
         """ Record hit on boss and moves to another (updates lap and tier if needed)"""
         try:
             await service.get_guild_by_id(interaction.guild.id)
-            await hit_kill(service, interaction, interaction.user.id, comp, player_name, ovf_time=ovf_time)
+            await hit_kill(service, interaction, comp, player_name, ovf_time=ovf_time)
         except TableEntryDoesntExistsError as e:
             await interaction.response.send_message(e)
 
@@ -224,7 +224,9 @@ def run_discord_bot():
         try:
             await service.get_guild_by_id(interaction.guild.id)
             players = await service.get_player_by_discord_id(interaction.user.id)
-            clan = await service.get_clan_by_guild(interaction.guild_id)
+            player = multiple_players_check(player_name, players)
+            clan_player = await service.get_clan_player(player.player_id)
+            clan = clan_player[1]
             cb = await service.get_clan_battle_active_by_clan_id(clan.clan_id)
 
             day_of_cb = get_cb_day(cb)
@@ -287,13 +289,12 @@ def run_discord_bot():
     async def ovf_kill(interaction: discord.Interaction, player_name: Optional[str] = None):
         """  Record ovf and moves to another (updates lap and tier if needed)"""
         try:
-            guild = await service.get_guild_by_id(interaction.guild.id)
-            if not guild:
-                raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
+            await service.get_guild_by_id(interaction.guild.id)
             players = await service.get_player_by_discord_id(interaction.user.id)
-            clan = await service.get_clan_by_guild(interaction.guild_id)
+            player = multiple_players_check(player_name, players)
+            clan_player = await service.get_clan_player(player.player_id)
+            clan = clan_player[1]
             cb = await service.get_clan_battle_active_by_clan_id(clan.clan_id)
-
             day_of_cb = get_cb_day(cb)
 
             player = multiple_players_check(player_name, players)
@@ -354,14 +355,15 @@ def run_discord_bot():
             return await interaction.response.send_message(e)
 
     @client.tree.command(name="check", description="Checks status of clan")
-    @app_commands.describe(cb_day='Day of cb, leave empty for today')
-    async def check(interaction: discord.Interaction, cb_day: Optional[int] = None):
+    @app_commands.describe(cb_day='Day of cb, leave empty for today', player_name='Name of the player')
+    async def check(interaction: discord.Interaction, cb_day: Optional[int] = None, player_name: Optional[str] = None):
         """ Check status of the clan """
         try:
-            guild = await service.get_guild_by_id(interaction.guild.id)
-            if not guild:
-                raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
-            clan = await service.get_clan_by_guild(interaction.guild_id)
+            await service.get_guild_by_id(interaction.guild.id)
+            players = await service.get_player_by_discord_id(interaction.user.id)
+            player = multiple_players_check(player_name, players)
+            clan_player = await service.get_clan_player(player.player_id)
+            clan = clan_player[1]
             cb = await service.get_clan_battle_active_by_clan_id(clan.clan_id)
             if not cb_day:
                 cb_day = get_cb_day(cb)
@@ -385,10 +387,12 @@ def run_discord_bot():
         """ Check status of yourself """
         try:
             await service.get_guild_by_id(interaction.guild.id)
-            clan = await service.get_clan_by_guild(interaction.guild_id)
             players = await service.get_player_by_discord_id(interaction.user.id)
-            cb = await service.get_clan_battle_active_by_clan_id(clan.clan_id)
             player = multiple_players_check(player_name, players)
+            clan_player = await service.get_clan_player(player.player_id)
+            clan = clan_player[1]
+            cb = await service.get_clan_battle_active_by_clan_id(clan.clan_id)
+
             if not cb_day:
                 cb_day = get_cb_day(cb)
             if 5 >= cb_day >= 1:
@@ -409,11 +413,15 @@ def run_discord_bot():
             return await interaction.response.send_message(e)
 
     @client.tree.command(name="getoverflows", description="Gets all available overflows in clan")
-    async def get_ovf_players(interaction: discord.Interaction):
+    @app_commands.describe(player_name='Name of your account')
+    async def get_ovf_players(interaction: discord.Interaction, player_name: Optional[str] = None):
         """ Get players with ovf """
         try:
             await service.get_guild_by_id(interaction.guild.id)
-            clan = await service.get_clan_by_guild(interaction.guild_id)
+            players = await service.get_player_by_discord_id(interaction.user.id)
+            player = multiple_players_check(player_name, players)
+            clan_player = await service.get_clan_player(player.player_id)
+            clan = clan_player[1]
             cb = await service.get_clan_battle_active_by_clan_id(clan.clan_id)
             cb_day = get_cb_day(cb)
             if cb_day:
@@ -433,16 +441,21 @@ def run_discord_bot():
             return await interaction.response.send_message(e)
 
     @client.tree.command(name="bossavailability", description="Gets all available booking for boss in lap")
-    @app_commands.describe(lap="Desired lap", boss_num='Boss number')
-    async def boss_availability(interaction: discord.Interaction, lap: str, boss_num: str):
+    @app_commands.describe(lap="Desired lap", boss_num='Boss number', player_name='Name of the player')
+    async def boss_availability(interaction: discord.Interaction, lap: str, boss_num: str,
+                                player_name: Optional[str] = None):
 
         try:
             lap_int = int(lap)
             boss_num_int = int(boss_num)
             await service.get_guild_by_id(interaction.guild.id)
 
-            clan = await service.get_clan_by_guild(interaction.guild.id)
+            players = await service.get_player_by_discord_id(interaction.user.id)
+            player = multiple_players_check(player_name, players)
+            clan_player = await service.get_clan_player(player.player_id)
+            clan = clan_player[1]
             cb = await service.get_clan_battle_active_by_clan_id(clan.clan_id)
+
             boss = await service.get_active_boss_by_cb_id(cb.cb_id)
             booking_tup = await service.get_all_boss_bookings_by_lap(boss.boss_number, boss_num_int, cb.lap, lap_int,
                                                                      cb.cb_id)
@@ -497,10 +510,11 @@ def run_discord_bot():
     async def record_reset(interaction: discord.Interaction, player_name: Optional[str] = None):
         try:
             await service.get_guild_by_id(interaction.guild.id)
-            clan = await service.get_clan_by_guild(interaction.guild_id)
             players = await service.get_player_by_discord_id(interaction.user.id)
-            cb = await service.get_clan_battle_active_by_clan_id(clan.clan_id)
             player = multiple_players_check(player_name, players)
+            clan_player = await service.get_clan_player(player.player_id)
+            clan = clan_player[1]
+            cb = await service.get_clan_battle_active_by_clan_id(clan.clan_id)
             cb_day = get_cb_day(cb)
             if cb_day:
                 pcdi = await service.get_pcdi_by_player_id_and_cb_id_and_day(player.player_id, cb.cb_id, cb_day)
@@ -513,11 +527,15 @@ def run_discord_bot():
             return await interaction.response.send_message(e)
 
     @client.tree.command(name="gethitters", description="Get players that still have hits left")
-    @app_commands.describe(cb_day='Day of cb, leave empty for today')
-    async def get_hitters(interaction: discord.Interaction, cb_day: Optional[int] = None):
+    @app_commands.describe(cb_day='Day of cb, leave empty for today', player_name='Name of the player')
+    async def get_hitters(interaction: discord.Interaction, player_name: Optional[str] = None,
+                          cb_day: Optional[int] = None):
         try:
             await service.get_guild_by_id(interaction.guild.id)
-            clan = await service.get_clan_by_guild(interaction.guild_id)
+            players = await service.get_player_by_discord_id(interaction.user.id)
+            player = multiple_players_check(player_name, players)
+            clan_player = await service.get_clan_player(player.player_id)
+            clan = clan_player[1]
             cb = await service.get_clan_battle_active_by_clan_id(clan.clan_id)
             if not cb_day:
                 cb_day = get_cb_day(cb)

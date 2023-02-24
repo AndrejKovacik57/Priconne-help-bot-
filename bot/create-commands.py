@@ -6,9 +6,8 @@ from exceptions.exceptions import ParameterIsNullError, ObjectExistsInDBError, T
 from service.service import Service
 from db_model.table_classes import Clan, Player, ClanPlayer, ClanBattle, PlayerCBDayInfo, TeamComposition, Boss, \
     BossBooking,  ClanRole
-from datetime import datetime, timedelta
-import pytz
-from .help_functions import multiple_players_check
+
+from .help_functions import multiple_players_check, get_cb_day
 from typing import Optional
 
 
@@ -70,11 +69,15 @@ class CreateGroup(app_commands.Group):
                     if user_role.id == role[2]:
                         clans = await self.service.get_clans(guild_id)
                         for i in range(len(clans)):
-                            exists = await self.service.exists_cb_in_date_by_clan_id(start_date, clans[i].name)
+                            exists = await self.service.exists_cb_in_date_by_clan_id(start_date, clans[i].clan_id)
                             if exists:
-                                error_message = f'Cant create clan battle because there is clan battle at this date: {exists}'
+                                error_message = f'Cant create clan battle because there is clan battle at this date: ' \
+                                                f'{exists}'
                                 await interaction.response.send_message(error_message)
                             cb = await self.service.create_clan_battle(clans[i][0], cb_name, start_date)
+                            cb.active = True
+                            cb = await self.service.update_clan_batte(cb)
+
                             clan_players = await self.service.get_players_from_clan(clans[i][0])
                             for clan_player in clan_players:
                                 for _ in range(5):
@@ -85,7 +88,8 @@ class CreateGroup(app_commands.Group):
                             boss1.active = True
                             await self.service.update_boss(boss1)
 
-                            await interaction.response.send_message(f"Created clan battle for all clans on `{start_date}`")
+                            await interaction.response.send_message(f"Created clan battle for all clans on "
+                                                                    f"`{start_date}`")
                         # clan = await self.service.get_clan_by_guild(interaction.guild_id)
                         # exists = await self.service.exists_cb_in_date_by_clan_id(start_date, clan.clan_id)
                         # if exists:
@@ -121,18 +125,13 @@ class CreateGroup(app_commands.Group):
         """ Create team composition """
         try:
             await self.service.get_guild_by_id(interaction.guild.id)
-            clan = await self.service.get_clan_by_guild(interaction.guild_id)
-            cb = await self.service.get_clan_battle_active_by_clan_id(clan.clan_id)
             players = await self.service.get_player_by_discord_id(interaction.user.id)
             player = multiple_players_check(player_name, players)
-
-            utc = pytz.UTC  # Create a UTC timezone object
-            current_time_object = datetime.now(tz=utc).date()
-            start_date_object = datetime.strptime(cb.start_date, "%d-%m-%Y").date()
-            end_date_object = datetime.strptime(cb.end_date, "%d-%m-%Y").date()
-            if start_date_object <= current_time_object <= end_date_object:
-                day_of_cb = (current_time_object - start_date_object).days + 1
-
+            clan_player = await self.service.get_clan_player(player.player_id)
+            clan = clan_player[1]
+            cb = await self.service.get_clan_battle_active_by_clan_id(clan.clan_id)
+            day_of_cb = get_cb_day(cb)
+            if day_of_cb:
                 pcdi = await self.service.get_pcdi_by_player_id_and_cb_id_and_day(player.player_id, cb.cb_id, day_of_cb)
                 tc = await self.service.create_team_composition(comp, pcdi.pcbdi_id)
 

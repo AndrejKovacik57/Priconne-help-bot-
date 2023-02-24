@@ -23,12 +23,12 @@ def get_cb_day(cb):
         return None
 
 
-async def update_bosses_when_tier_change(service, cb, boss_char, boss_tier):
+async def update_bosses_when_tier_change(service, cb, boss_char, boss_tier, change_active=True):
     bosses = await service.get_bosses(cb.cb_id)
     for boss_iter in bosses:
         boss_iter.name = f'{boss_char}{boss_iter.boss_number}'
         boss_iter.ranking = boss_tier
-        if boss_iter.boss_number == 1:
+        if boss_iter.boss_number == 1 and change_active:
             boss_iter.active = True
         await service.update_boss(boss_iter)
 
@@ -94,12 +94,13 @@ def multiple_players_check(player_name, players):
     return player
 
 
-async def hit_kill(service, interaction, player_discord_id, tc_name, player_name, ovf_time=''):
+async def hit_kill(service, interaction, tc_name, player_name, ovf_time=''):
     """ help function for hit and kill functions """
     try:
-        players = await service.get_player_by_discord_id(player_discord_id)
+        players = await service.get_player_by_discord_id(interaction.user.id)
         player = multiple_players_check(player_name, players)
-        clan = await service.get_clan_by_guild(interaction.guild_id)
+        clan_player = await service.get_clan_player(player.player_id)
+        clan = clan_player[1]
         cb = await service.get_clan_battle_active_by_clan_id(clan.clan_id)
         day_of_cb = get_cb_day(cb)
 
@@ -190,8 +191,11 @@ async def book_boss_help(service, interaction, ovf_time, lap, boss_num, comp_nam
         lap_int = int(lap)
         boss_num_int = int(boss_num)
         players = await service.get_player_by_discord_id(interaction.user.id)
-        clan = await service.get_clan_by_guild(interaction.guild_id)
+        player = multiple_players_check(player_name, players)
+        clan_player = await service.get_clan_player(player.player_id)
+        clan = clan_player[1]
         cb = await service.get_clan_battle_active_by_clan_id(clan.clan_id)
+
         boss = await service.get_boss_by_boss_number(boss_num_int, cb.cb_id)
         boss_char = boss_char_by_lap(lap_int)
         boss_name = f'{boss_char}{boss.name[1:]}'

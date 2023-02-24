@@ -838,9 +838,9 @@ class Service:
                 if result:
                     raise ObjectExistsInDBError(result)
 
-            await cur.execute(""" UPDATE ClanBattle SET name=:name,lap=:lap,tier=:tier WHERE id=:id """
+            await cur.execute(""" UPDATE ClanBattle SET name=:name,lap=:lap,tier=:tier, active=:active WHERE id=:id """
                               , {'name': clan_battle.name, 'lap': clan_battle.lap, "tier": clan_battle.tier,
-                                 "id": clan_battle.cb_id})
+                                 "id": clan_battle.cb_id, 'active': clan_battle.active})
             await conn.commit()
             await cur.execute("SELECT * FROM ClanBattle WHERE id=:id", {'id': clan_battle.cb_id})
             updated_result = await cur.fetchone()

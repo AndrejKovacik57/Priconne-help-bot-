@@ -10,6 +10,24 @@ class Clan:
                 f"guild_id: {self.guild_id}\n"
                 f"name: {self.name}\n")
 
+    def __eq__(self, other):
+        return self.clan_id == other.clan_id
+
+    def __ne__(self, other):
+        return self.clan_id != other.clan_id
+
+    def __lt__(self, other):
+        return self.clan_id < other.clan_id
+
+    def __le__(self, other):
+        return self.clan_id <= other.clan_id
+
+    def __gt__(self, other):
+        return self.clan_id > other.clan_id
+
+    def __ge__(self, other):
+        return self.clan_id >= other.clan_id
+
 
 class Guild:
     def __init__(self, guild_id):
