@@ -286,9 +286,7 @@ class Service:
         if not results:
             TableEntryDoesntExistsError('There is no clan for this server')
 
-        clan_array = [result for result in results]
-
-        return clan_array
+        return [Clan(result[0], result[1], result[2]) for result in results]
 
     async def get_clans_paginate(self, limit: int, offset: int) -> list:
         """ Paginate clan table """
