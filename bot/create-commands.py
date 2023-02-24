@@ -56,37 +56,68 @@ class CreateGroup(app_commands.Group):
             await interaction.response.send_message(e)
 
     @app_commands.command(description="Create clan battle")
-    @app_commands.describe(cb_name="Clan battle name", start_date="date format is DD-MM-YYYY")
+    @app_commands.describe(cb_name="Ex. CB25", start_date="Date format is DD-MM-YYYY")
     async def cb(self, interaction: discord.Interaction, cb_name: str, start_date: str):
         """ Create cb """
         try:
-            await self.service.get_guild_by_id(interaction.guild.id)
-            clan = await self.service.get_clan_by_guild(interaction.guild_id)
-            exists = await self.service.exists_cb_in_date_by_clan_id(start_date, clan.clan_id)
-            if exists:
-                error_message = f'Cant create clan battle because there is clan battle at this date: {exists}'
-                await interaction.response.send_message(error_message)
-            cb = await self.service.create_clan_battle(clan.clan_id, cb_name, start_date)
-            clan_players = await self.service.get_players_from_clan(clan.clan_id)
+            guild_id = interaction.guild.id
+            await self.service.get_guild_by_id(guild_id)
+            user_roles = interaction.user.roles
+            roles = await self.service.get_guild_admin(guild_id)
+            roles += await self.service.get_guild_lead(guild_id)
+            for user_role in user_roles:
+                for role in roles:
+                    if user_role.id == role[2]:
+                        clans = await self.service.get_clans(guild_id)
+                        for i in range(len(clans)):
+                            exists = await self.service.exists_cb_in_date_by_clan_id(start_date, clans[i][0])
+                            if exists:
+                                error_message = f'Cant create clan battle because there is clan battle at this date: {exists}'
+                                await interaction.response.send_message(error_message)
+                            cb = await self.service.create_clan_battle(clans[i][0], cb_name, start_date)
+                            clan_players = await self.service.get_players_from_clan(clans[i][0])
+                            for clan_player in clan_players:
+                                for _ in range(5):
+                                    await self.service.create_player_cb_day_info(cb.cb_id, clan_player.player_id)
+                            for boss_number in range(5):
+                                await self.service.create_boss(f'A{boss_number + 1}', boss_number + 1, 1, cb.cb_id)
+                            boss1 = await self.service.get_boss_by_boss_number(1, cb.cb_id)
+                            boss1.active = True
+                            await self.service.update_boss(boss1)
 
-            for clan_player in clan_players:
-                for _ in range(5):
-                    await self.service.create_player_cb_day_info(cb.cb_id, clan_player.player_id)
-            for boss_number in range(5):
-                await self.service.create_boss(f'A{boss_number + 1}', boss_number + 1, 1, cb.cb_id)
-            boss1 = await self.service.get_boss_by_boss_number(1, cb.cb_id)
-            boss1.active = True
-            await self.service.update_boss(boss1)
+                            await interaction.response.send_message(f"Created clan battle for all clans on `{start_date}`")
+                        # clan = await self.service.get_clan_by_guild(interaction.guild_id)
+                        # exists = await self.service.exists_cb_in_date_by_clan_id(start_date, clan.clan_id)
+                        # if exists:
+                        #     error_message = f'Cant create clan battle because there is clan battle at this date: {exists}'
+                        #     await interaction.response.send_message(error_message)
+                        # cb = await self.service.create_clan_battle(clan.clan_id, cb_name, start_date)
+                        # clan_players = await self.service.get_players_from_clan(clan.clan_id)
 
-            await interaction.response.send_message(f"Created clan battle start: {cb.start_date}, end: {cb.end_date}, "
-                                                    f"bosses and player tables")
+                        # for clan_player in clan_players:
+                        #     for _ in range(5):
+                        #         await self.service.create_player_cb_day_info(cb.cb_id, clan_player.player_id)
+                        # for boss_number in range(5):
+                        #     await self.service.create_boss(f'A{boss_number + 1}', boss_number + 1, 1, cb.cb_id)
+                        # boss1 = await self.service.get_boss_by_boss_number(1, cb.cb_id)
+                        # boss1.active = True
+                        # await self.service.update_boss(boss1)
+
+                        # await interaction.response.send_message(f"Created clan battle."
+                        #                                         f"\nStart: {cb.start_date}, End: {cb.end_date} "
+                        #                                         f"Created bosses and player tables")
+                        break
+                else:
+                    continue
+                # This will be executed only if the inner loop was terminated by break
+                break
         except (ObjectExistsInDBError, TableEntryDoesntExistsError, PlayerCBDayInfoLimitOfEntriesForPlayerAndCBReached
                 , TableEntryDoesntExistsError, ValueError) as e:
             await interaction.response.send_message(e)
 
     @app_commands.command(description="Create team composition")
-    @app_commands.describe(tc_name="Team composition to create for current day", player_name='Name of your account')
-    async def team_composition(self, interaction: discord.Interaction, tc_name: str, player_name: Optional[str] = None):
+    @app_commands.describe(comp="Team composition to create for current day", player_name='Name of your account')
+    async def team_composition(self, interaction: discord.Interaction, comp: str, player_name: Optional[str] = None):
         """ Create team composition """
         try:
             await self.service.get_guild_by_id(interaction.guild.id)
@@ -103,7 +134,7 @@ class CreateGroup(app_commands.Group):
                 day_of_cb = (current_time_object - start_date_object).days + 1
 
                 pcdi = await self.service.get_pcdi_by_player_id_and_cb_id_and_day(player.player_id, cb.cb_id, day_of_cb)
-                tc = await self.service.create_team_composition(tc_name, pcdi.pcbdi_id)
+                tc = await self.service.create_team_composition(comp, pcdi.pcbdi_id)
 
                 await interaction.response.send_message(f"Created team compositon: {tc.name}")
             else:

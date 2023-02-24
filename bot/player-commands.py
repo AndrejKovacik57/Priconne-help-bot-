@@ -22,6 +22,18 @@ class PlayerGroup(app_commands.Group):
     #         for choice in players if current.lower() in choice.name.lower()
     #     ]
 
+    @app_commands.command(description="Delete a player registered under yourself")
+    @app_commands.describe(player="Player name to delete")
+    async def delete(self, interaction: discord.Interaction, player: str):
+        try:
+            await self.service.get_guild_by_id(interaction.guild.id)
+            await self.service.delete_player_by_discord_id_name(interaction.user.id, player)
+
+            await interaction.response.send_message(f"You have deleted player: {player}")
+        except TableEntryDoesntExistsError as e:
+            await interaction.response.send_message(e)
+
+
     @app_commands.command(description="Check info about specified player")
     @app_commands.describe(player_name="Player to check")
     # @app_commands.autocomplete(choice=player_names_autocomplete)

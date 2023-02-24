@@ -60,27 +60,30 @@ def run_discord_bot():
                 **help**: Shows list of commands.
                 **invite**: Bot invite link *(WIP)*.
             """)
-        # embed.set_author(name="MangaUpdates", icon_url=self.bot.user.avatar.url)
+        # embed.set_author(name="Marin", icon_url=self.bot.user.avatar.url)
         # embed.set_author(name="Marin")
         embed.add_field(name="__Server__",
                         value="""
                 **server setup**: Register server in bot. **MUST** run or else bot will not operate.
                 **server addadminrole `role_id`**: Add role *(role ID)* as **admin role** in bot.
+                **server removeadminrole `role_id`**: Remove role *(role ID)* from **admin role** in bot.
                 **server addleadrole `role_id`**: Add role *(role ID)* as **lead role** in bot.
+                **server removeleadrole `role_id`**: Remove role *(role ID)* from **lead role** in bot.
             """, inline=False)
         embed.add_field(name="__Create__",
                         value="""
                 **create clan `clan`**: Create clan called `clan`.
                 **create player `player`**: Create player called `player`.
+                **create cb `cb_name` `start_date`**: Create CB for all clans for `cb_name` starting on `start_date`.
             """, inline=False)
         embed.add_field(name="__Clan__",
                         value="""
-                **clan check**: Check info regarding own clan.
                 **clan list**:  Get list of clans.
                 **clan updatename `clan` `newname`**: Change name of `clan` to `newname`.
                 **clan playerlist**: Check list of players in clan.
                 **clan addplayer `player` `clan`**: Add `player` to `clan`.
                 **clan removeplayer `player` `clan`**: Remove `player` from `clan`.
+                **clan join `player` `clan`**: Join `clan` under `player`.
             """, inline=False)
         embed.add_field(name="__Player__",
                         value="""
@@ -155,19 +158,19 @@ def run_discord_bot():
     #         await interaction.response.send_message(e)
 
     @client.tree.command(name="hit", description="Register hit")
-    @app_commands.describe(tc_name="Name of team composition", player_name='Name of your account')
-    async def hit(interaction: discord.Interaction, tc_name: str, player_name: Optional[str] = None):
+    @app_commands.describe(comp="Name of team composition", player_name='Name of your account')
+    async def hit(interaction: discord.Interaction, comp: str, player_name: Optional[str] = None):
         """ Record hit on boss """
         try:
             await service.get_guild_by_id(interaction.guild.id)
-            await hit_kill(service, interaction, interaction.user.id, tc_name, player_name)
+            await hit_kill(service, interaction, interaction.user.id, comp, player_name)
         except (TableEntryDoesntExistsError, ValueError) as e:
             await interaction.response.send_message(e)
 
     @client.tree.command(name="pilothit", description="Pilot and register hit")
-    @app_commands.describe(tc_name="Name of team composition",
+    @app_commands.describe(comp="Name of team composition",
                            piloted_player_name='Name of the player that was piloted')
-    async def pilot_hit(interaction: discord.Interaction, tc_name: str, piloted_player_name: str):
+    async def pilot_hit(interaction: discord.Interaction, comp: str, piloted_player_name: str):
         """ Record hit on boss """
         try:
             guild = await service.get_guild_by_id(interaction.guild.id)
@@ -180,24 +183,24 @@ def run_discord_bot():
             if clan_player_clan.clan_id != clan.clan_id:
                 raise TableEntryDoesntExistsError(f'Player {piloted_player_name} is not in clan.')
 
-            await hit_kill(service, interaction, player.discord_id, tc_name, piloted_player_name)
+            await hit_kill(service, interaction, player.discord_id, comp, piloted_player_name)
         except (TableEntryDoesntExistsError, PlayerNotInClanError, ValueError) as e:
             await interaction.response.send_message(e)
 
     @client.tree.command(name="kill", description="Record hit and killing of the boss")
-    @app_commands.describe(tc_name="Team composition name", player_name='Name of your account', ovf_time="Ovf time")
-    async def kill(interaction: discord.Interaction, tc_name: str, ovf_time: str, player_name: Optional[str] = None):
+    @app_commands.describe(comp="Team composition name", player_name='Name of your account', ovf_time="Ovf time")
+    async def kill(interaction: discord.Interaction, comp: str, ovf_time: str, player_name: Optional[str] = None):
         """ Record hit on boss and moves to another (updates lap and tier if needed)"""
         try:
             await service.get_guild_by_id(interaction.guild.id)
-            await hit_kill(service, interaction, interaction.user.id, tc_name, player_name, ovf_time=ovf_time)
+            await hit_kill(service, interaction, interaction.user.id, comp, player_name, ovf_time=ovf_time)
         except TableEntryDoesntExistsError as e:
             await interaction.response.send_message(e)
 
     @client.tree.command(name="pilotkill", description="Pilot and register kill")
-    @app_commands.describe(tc_name="Name of team composition",
+    @app_commands.describe(comp="Name of team composition",
                            piloted_player_name='Name of the player that was piloted', ovf_time="Ovf time")
-    async def pilot_kill(interaction: discord.Interaction, tc_name: str, piloted_player_name: str, ovf_time: str):
+    async def pilot_kill(interaction: discord.Interaction, comp: str, piloted_player_name: str, ovf_time: str):
         """ Record hit on boss """
         try:
             guild = await service.get_guild_by_id(interaction.guild.id)
@@ -210,7 +213,7 @@ def run_discord_bot():
             if clan_player_clan.clan_id != clan.clan_id:
                 raise TableEntryDoesntExistsError(f'Player {piloted_player_name} is not in clan.')
 
-            await hit_kill(service, interaction, player.discord_id, tc_name, piloted_player_name, ovf_time=ovf_time)
+            await hit_kill(service, interaction, player.discord_id, comp, piloted_player_name, ovf_time=ovf_time)
         except (TableEntryDoesntExistsError, PlayerNotInClanError, ValueError) as e:
             await interaction.response.send_message(e)
 
@@ -538,25 +541,45 @@ def run_discord_bot():
     @app_commands.describe(cb_name='Clan battle name')
     async def delete_cb(interaction: discord.Interaction, cb_name: str):
         try:
-            await service.get_guild_by_id(interaction.guild.id)
-            clan = await service.get_clan_by_guild(interaction.guild_id)
-            await service.delete_clan_battle_by_name_and_clan_id(cb_name, clan.clan_id)
+            guild_id = interaction.guild.id
+            await service.get_guild_by_id(guild_id)
+            user_roles = interaction.user.roles
+            roles = await service.get_guild_admin(guild_id)
+            roles += await service.get_guild_lead(guild_id)
+            for user_role in user_roles:
+                for role in roles:
+                    if user_role.id == role[2]:
+                        clans = await service.get_clans(guild_id)
+                        for i in range(len(clans)):
+                            await service.delete_clan_battle_by_name_and_clan_id(cb_name, clans[i][0])
+                            await interaction.response.send_message(f'You have deleted cb: {cb_name} and all related information '
+                                                                    f'for clans in your server')
 
-            await interaction.response.send_message(f'You have deleted cb: {cb_name} and all related information '
-                                                    f'in your clan')
+                        break
+                        # await interaction.response.send_message(f"Starting clan battle for all clans on `{date}`")
+
+                        # await service.delete_clan_battle_by_name_and_clan_id(cb_name, clan.clan_id)
+
+                        # await interaction.response.send_message(f'You have deleted cb: {cb_name} and all related information '
+                        #                                         f'in your clan')
+                        # break
+                else:
+                    continue
+                # This will be executed only if the inner loop was terminated by break
+                break
         except TableEntryDoesntExistsError as e:
             return await interaction.response.send_message(e)
 
-    @app_commands.command(name="deleteplayer", description="Delete a player")
-    @app_commands.describe(player="Player name to delete")
-    async def delete_player(interaction: discord.Interaction, player_name: str):
-        try:
-            await service.get_guild_by_id(interaction.guild.id)
-            await service.delete_player_by_discord_id_name(interaction.user.id, player_name)
+    # @app_commands.command(name="deleteplayer", description="Delete a player")
+    # @app_commands.describe(player="Player name to delete")
+    # async def delete_player(interaction: discord.Interaction, player_name: str):
+    #     try:
+    #         await service.get_guild_by_id(interaction.guild.id)
+    #         await service.delete_player_by_discord_id_name(interaction.user.id, player_name)
 
-            await interaction.response.send_message(f"You have deleted player: {player_name}")
-        except TableEntryDoesntExistsError as e:
-            await interaction.response.send_message(e)
+    #         await interaction.response.send_message(f"You have deleted player: {player_name}")
+    #     except TableEntryDoesntExistsError as e:
+    #         await interaction.response.send_message(e)
 
     @hit.error
     async def say_error(interaction: discord.Interaction, error):

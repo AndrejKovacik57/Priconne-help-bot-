@@ -276,12 +276,15 @@ class Service:
 
         return Clan(result[0], result[1], result[2])
 
-    async def get_clans(self) -> list:
-        """ Gets all clans """
+    async def get_clans(self, guild_id: int) -> list:
+        """ Gets all clans in guild """
         async with aiosqlite.connect(self.db) as conn:
             cur = await conn.cursor()
-            await cur.execute(""" SELECT * FROM Clan """)
+            await cur.execute(""" SELECT * FROM Clan WHERE guild_id=:guild_id """, {'guild': guild_id})
             results = await cur.fetchall()
+
+        if not results:
+            TableEntryDoesntExistsError('There is no clan for this server')
 
         clan_array = [result for result in results]
 

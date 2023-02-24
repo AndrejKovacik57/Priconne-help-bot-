@@ -39,7 +39,7 @@ class ClanGroup(app_commands.Group):
             guild = await self.service.get_guild_by_id(guild_id)
             if not guild:
                 raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
-            clan_list = await self.service.get_clans()
+            clan_list = await self.service.get_clans(guild_id)
             message_string = ''
             for clan in clan_list:
                 message_string += f"- {clan.name}\n"
