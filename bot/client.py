@@ -2,7 +2,9 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 from exceptions.exceptions import ParameterIsNullError, ObjectExistsInDBError, TableEntryDoesntExistsError, \
-    ClanBattleCantHaveMoreThenFiveDaysError, DesiredBossIsDeadError, PlayerNotInClanError, ObjectDoesntExistsInDBError
+    PlayerCBDayInfoLimitOfEntriesForPlayerAndCBReached, ClanBattleCantHaveMoreThenFiveDaysError, \
+    ObjectDoesntExistsInDBError, PlayerAlreadyInClanError, PlayerNotInClanError, ThereIsAlreadyActiveCBError, \
+    DesiredBossIsDeadError, CantBookDeadBossError, NoActiveCBError
 import json
 import os
 from service.service import Service
@@ -88,8 +90,18 @@ def run_discord_bot():
         embed.add_field(name="__Player__",
                         value="""
                 **player delete `player`**: Delete `player`.
-                **player selfcheck**: Check info regarding self.
                 **player check `player`**: Check info regarding `player`.
+            """, inline=False)
+        embed.add_field(name="__CB-Related__",
+                        value="""
+                **hit `comp` `player_name`**: Register a hit under `player_name` with `comp`.
+                **pilothit `comp` `piloted_player_name`**: Register a piloted hit under `piloted_player_name` with `comp`.
+                **kill `comp` `player_name` `ovf_time`**: Register a killed boss hit with `ovf_time`.
+                **pilotkill `comp` `piloted_player_name` `ovf_time`**: Register a killed boss hit under piloted player's account with `ovf_time`.
+            """, inline=False)
+        embed.add_field(name="__AVOID__",
+                        value="""
+                There are other commands registered under me, but if they are not found on this list, please **AVOID** using them for now.
             """, inline=False)
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
@@ -158,7 +170,7 @@ def run_discord_bot():
     #         await interaction.response.send_message(e)
 
     @client.tree.command(name="hit", description="Register hit")
-    @app_commands.describe(comp="Name of team composition", player_name='Name of your account')
+    @app_commands.describe(comp="Ex. A32, D302SA", player_name='Name of your account')
     async def hit(interaction: discord.Interaction, comp: str, player_name: Optional[str] = None):
         """ Record hit on boss """
         try:
@@ -377,7 +389,7 @@ def run_discord_bot():
                                                         f"Clan ranking: {ranking}")
             else:
                 await interaction.response.send_message(f"Not a cb day")
-        except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDaysError, TableEntryDoesntExistsError) as e:
+        except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDaysError, TableEntryDoesntExistsError, NoActiveCBError) as e:
             return await interaction.response.send_message(e)
 
     @client.tree.command(name="selfcheck", description="Checks status of yourself")

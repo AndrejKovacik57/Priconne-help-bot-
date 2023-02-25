@@ -90,10 +90,13 @@ class ClanGroup(app_commands.Group):
             if not guild:
                 raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
             player_list = await self.service.get_players_from_clan_name(clan)
+            # print(player_list)
             message_string = ''
+            i = 1
             for player in player_list:
-                player_name = player.name
-                message_string += f"- {player_name}\n"
+                player_name = player[1]
+                message_string += f"{i}. {player_name}\n"
+                i += 1
             await interaction.response.send_message(f"List of players in clan: **{clan}**\n{message_string}")
         except (ObjectDoesntExistsInDBError, PlayerNotInClanError) as e:
             await interaction.response.send_message(e)
@@ -254,7 +257,7 @@ class ClanGroup(app_commands.Group):
             await interaction.response.send_message(e)
 
     @app_commands.command(name="changeboss", description="Changes current boss")
-    @app_commands.describe(tier="Boss number", player_name='Name of your account')
+    @app_commands.describe(boss_num="Boss number", player_name='Name of your account')
     async def change_boss(self, interaction: discord.Interaction, boss_num: int, player_name: Optional[str] = None):
         """ changes current boss """
 

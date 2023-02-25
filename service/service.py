@@ -280,7 +280,7 @@ class Service:
         """ Gets all clans in guild """
         async with aiosqlite.connect(self.db) as conn:
             cur = await conn.cursor()
-            await cur.execute(""" SELECT * FROM Clan WHERE guild_id=:guild_id """, {'guild': guild_id})
+            await cur.execute(""" SELECT * FROM Clan WHERE guild_id=:guild_id """, {'guild_id': guild_id})
             results = await cur.fetchall()
 
         if not results:
