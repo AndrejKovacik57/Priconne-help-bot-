@@ -54,7 +54,7 @@ def run_discord_bot():
             ephemeral=False)
 
     @client.tree.command(name="help")
-    @app_commands.describe(type='Basic | Server | Create | Clan | Player | CB | Admin | Lead')
+    @app_commands.describe(type='Basic | Server | Create | Clan | Player | CB 1 | CB 2 | Admin | Lead')
     async def help_func(interaction: discord.Interaction, type: str):
                     # embed.set_author(name="Marin", icon_url=self.bot.user.avatar.url)
             # embed.set_author(name="Marin")
@@ -114,7 +114,7 @@ def run_discord_bot():
                     **player delete `player`**: Delete `player`.
                     **player check `player`**: Check info regarding `player`.
                 """, inline=False)
-        elif type == "CB":
+        elif type == "CB 1":
             embed = discord.Embed(title="Marin Bot Commands - CB", color=0x3083e3,
                                 description="""
                     Hi fellow **Cosplayer**! I'm a CB bot, designed to make your CB life easier!
@@ -128,7 +128,15 @@ def run_discord_bot():
                     **ovfhit `player_name`**: Removes ovf from `player_name`.
                     **pilotovfhit `piloted_player_name`**: Removes ovf from `piloted_player_name`.
                     **ovfkill `player_name`**: Kill boss with ovf and remove ovf from `player_name`.
-                    **ovfkill `piloted_player_name`**: Kill boss with ovf and remove ovf from `piloted_player_name`.
+                    **pilotovfkill `piloted_player_name`**: Kill boss with ovf and remove ovf from `piloted_player_name`.
+                """, inline=False)
+        elif type == "CB 2":
+            embed = discord.Embed(title="Marin Bot Commands - CB", color=0x3083e3,
+                                description="""
+                    Hi fellow **Cosplayer**! I'm a CB bot, designed to make your CB life easier!
+                """)
+            embed.add_field(name="__CB-Related__",
+                            value="""
                     **check `cb_day` `player_name`**: Check status of clan on `cb_day`.
                     **selfcheck `cb_day` `player_name`**: Check status of `player_name`.
                     **getoverflows `player_name`**: Get all available overflows in clan.
