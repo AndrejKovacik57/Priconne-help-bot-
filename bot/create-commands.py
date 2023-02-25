@@ -32,13 +32,8 @@ class CreateGroup(app_commands.Group):
                 for role in roles:
                     if user_role.id == role[2]:
                         clan = await self.service.create_clan(clan_name, guild_id)
-                        await interaction.response.send_message(f"Created clan: **{clan.name}**")
-                        break
-                else:
-                    continue
-                # This will be executed only if the inner loop was terminated by break
-                break
-            # await interaction.response.send_message('blabla')
+                        return await interaction.response.send_message(f"Created clan: **{clan.name}**")
+            return await interaction.response.send_message('blabla')
         except (ObjectExistsInDBError, ObjectDoesntExistsInDBError) as e:
             await interaction.response.send_message(e)
 
@@ -47,10 +42,36 @@ class CreateGroup(app_commands.Group):
     async def player(self, interaction: discord.Interaction, player_name: str):
         """ Create player """
         try:
-            await self.service.get_guild_by_id(interaction.guild.id)
+            guild_id = interaction.guild.id
+            await self.service.get_guild_by_id(guild_id)
             player = await self.service.create_player(player_name, interaction.user.id)
             await interaction.response.send_message(f"Created player: **{player.name}**")
 
+        except (ObjectDoesntExistsInDBError, ObjectExistsInDBError) as e:
+            await interaction.response.send_message(e)
+    
+    @app_commands.command(description="Create player for someone else")
+    @app_commands.describe(player_name="Player to create", discord_id="ID of person to create player for")
+    async def playerforyou(self, interaction: discord.Interaction, player_name: str, discord_id: str):
+        """ Create player """
+        try:
+            guild_id = interaction.guild.id
+            guild = await self.service.get_guild_by_id(guild_id)
+            user_roles = interaction.user.roles
+            roles = await self.service.get_guild_admin(guild_id)
+            roles += await self.service.get_guild_lead(guild_id)
+            for user_role in user_roles:
+                for role in roles:
+                    if user_role.id == role[2]:
+                        player = await self.service.create_player(player_name, discord_id)
+                        embed = discord.Embed(title="Created", color=0x3083e3,
+                                description=f"Created player: **{player.name}** for <@{discord_id}>")
+                        return await interaction.response.send_message(embed=embed)
+            embed = discord.Embed(title="Error", color=0x3083e3,
+                                description="""
+                    You don't have permission to use this command!
+                """)
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
         except (ObjectDoesntExistsInDBError, ObjectExistsInDBError) as e:
             await interaction.response.send_message(e)
 

@@ -163,6 +163,7 @@ def run_discord_bot():
                             value="""
                     **create clan `clan`**: Create clan called `clan`.
                     **create cb `cb_name` `start_date`**: Create CB for all clans for `cb_name` starting on `start_date`.
+                    **create playerforyou `player_name` `discord_id`**: Create player for someone else.
                 """, inline=False)
             embed.add_field(name="__Clan__",
                             value="""
@@ -186,17 +187,14 @@ def run_discord_bot():
             embed.add_field(name="__Create__",
                             value="""
                     **create clan `clan`**: Create clan called `clan`.
-                    **create cb `cb_name` `start_date`**: Create CB for all clans for `cb_name` starting on `start_date`.
+                    **create cb `cb_name` `start_date`**: Create CB for all clans for `cb_name` on given date.
+                    **create playerforyou `player_name` `discord_id`**: Create player for someone else.
                 """, inline=False)
             embed.add_field(name="__Clan__",
                             value="""
                     **clan updatename `clan` `newname`**: Change name of `clan` to `newname`.
                     **clan addplayer `player` `clan`**: Add `player` to `clan`.
                     **clan removeplayer `player` `clan`**: Remove `player` from `clan`.
-                """, inline=False)
-            embed.add_field(name="__AVOID__",
-                            value="""
-                    There are other commands registered under me, but if they are not found on this list, please **AVOID** using them for now.
                 """, inline=False)
         else: 
             embed = discord.Embed(title="Error", color=0x3083e3,
