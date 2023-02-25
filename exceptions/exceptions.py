@@ -29,11 +29,6 @@ class ParameterIsNullError(ValueError):
         super().__init__(message)
 
 
-class TableEntryDoesntExistsError(ValueError):
-    def __init__(self, message):
-        super().__init__(message)
-
-
 class PlayerCBDayInfoLimitOfEntriesForPlayerAndCBReached(ValueError):
     def __init__(self, message):
         super().__init__(message)

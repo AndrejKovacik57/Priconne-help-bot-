@@ -1,6 +1,6 @@
 import discord
 from discord import app_commands
-from exceptions.exceptions import ParameterIsNullError, ObjectExistsInDBError, TableEntryDoesntExistsError, \
+from exceptions.exceptions import ParameterIsNullError, ObjectExistsInDBError, \
     PlayerCBDayInfoLimitOfEntriesForPlayerAndCBReached, ClanBattleCantHaveMoreThenFiveDaysError, \
     ObjectDoesntExistsInDBError, PlayerAlreadyInClanError, PlayerNotInClanError
 from service.service import Service
@@ -15,6 +15,7 @@ class ClanGroup(app_commands.Group):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.service = Service("priconne_database")
+
     #
     # @app_commands.command(description="Check info regarding clan")
     # async def check(self, interaction: discord.Interaction):
@@ -23,7 +24,7 @@ class ClanGroup(app_commands.Group):
     #         guild_id = interaction.guild.id
     #         guild = await self.service.get_guild_by_id(guild_id)
     #         if not guild:
-    #             raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
+    #             raise ObjectDoesntExistsInDBError("Server doesn't exist! Please run **/server setup**")
     #         # service.get_clan_battles_in_clan("Automatically fetched clan_id / clan_name")
     #         await interaction.response.send_message(
     #             f"__**Info for clan: \_\_\_**__"
@@ -38,9 +39,8 @@ class ClanGroup(app_commands.Group):
         """ List of clans """
         try:
             guild_id = interaction.guild.id
-            guild = await self.service.get_guild_by_id(guild_id)
-            if not guild:
-                raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
+            await self.service.get_guild_by_id(guild_id)
+
             clan_list = await self.service.get_clans(guild_id)
             message_string = ''
             for clan in clan_list:
@@ -48,7 +48,7 @@ class ClanGroup(app_commands.Group):
             await interaction.response.send_message(
                 f"__List of clans__"
                 f"\n{message_string}")
-        except TableEntryDoesntExistsError as e:
+        except ObjectDoesntExistsInDBError as e:
             await interaction.response.send_message(e)
 
     @app_commands.command(description="Update name of clan")
@@ -59,7 +59,7 @@ class ClanGroup(app_commands.Group):
             guild_id = interaction.guild.id
             guild = await self.service.get_guild_by_id(guild_id)
             if not guild:
-                raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
+                raise ObjectDoesntExistsInDBError("Server doesn't exist! Please run **/server setup**")
             user_roles = interaction.user.roles
             roles = await self.service.get_guild_admin(guild_id)
             roles += await self.service.get_guild_lead(guild_id)
@@ -69,16 +69,11 @@ class ClanGroup(app_commands.Group):
                         existing_clan = await self.service.get_clan_by_name(clan_name)
                         existing_clan.name = newname
                         await self.service.update_clan(existing_clan)
-                        await interaction.response.send_message(f"Changed clan name from **{clan_name}** to **{newname}**")
-                        break
+                        return await interaction.response.send_message(
+                            f"Changed clan name from **{clan_name}** to **{newname}**")
 
-                else:
-                    continue
-                # This will be executed only if the inner loop was terminated by break
-                break
-            
-            await interaction.response.send_message(f"You don't have permission to use this command!")
-        except (TableEntryDoesntExistsError, ParameterIsNullError) as e:
+            return await interaction.response.send_message(f"You don't have permission to use this command!")
+        except (ObjectDoesntExistsInDBError, ParameterIsNullError) as e:
             await interaction.response.send_message(e)
 
     @app_commands.command(description="Check players in clan")
@@ -86,9 +81,7 @@ class ClanGroup(app_commands.Group):
         """ Check list of players in clan """
         try:
             guild_id = interaction.guild.id
-            guild = await self.service.get_guild_by_id(guild_id)
-            if not guild:
-                raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
+            await self.service.get_guild_by_id(guild_id)
             player_list = await self.service.get_players_from_clan_name(clan)
             # print(player_list)
             message_string = ''
@@ -107,9 +100,7 @@ class ClanGroup(app_commands.Group):
         """ Add player to an existing clan """
         try:
             guild_id = interaction.guild.id
-            guild = await self.service.get_guild_by_id(guild_id)
-            if not guild:
-                raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
+            await self.service.get_guild_by_id(guild_id)
             user_roles = interaction.user.roles
             roles = await self.service.get_guild_admin(guild_id)
             roles += await self.service.get_guild_lead(guild_id)
@@ -119,17 +110,12 @@ class ClanGroup(app_commands.Group):
                     if user_role.id == role[2]:
                         player_to_add = await self.service.get_player_by_name(player)
                         clan_to_join = await self.service.get_clan_by_name(clan)
-                        clan_player = await self.service.add_player_to_clan(clan_to_join.clan_id, player_to_add.player_id)
-                        await interaction.response.send_message(f"Added **{player}** to clan: **{clan}**.")
-                        break
-                else:
-                    continue
-                # This will be executed only if the inner loop was terminated by break
-                break
-            if not clan_player:
-                await interaction.response.send_message(f"You don't have permission to use this command!")
+                        await self.service.add_player_to_clan(clan_to_join.clan_id, player_to_add.player_id)
+                        return await interaction.response.send_message(f"Added **{player}** to clan: **{clan}**.")
+
+            return await interaction.response.send_message(f"You don't have permission to use this command!")
         except (ObjectDoesntExistsInDBError, ObjectExistsInDBError, ParameterIsNullError, PlayerAlreadyInClanError,
-                TableEntryDoesntExistsError) as e:
+                ObjectDoesntExistsInDBError) as e:
             await interaction.response.send_message(e)
 
     @app_commands.command(description="Join clan")
@@ -138,14 +124,13 @@ class ClanGroup(app_commands.Group):
         """ Join clan with player """
         try:
             guild_id = interaction.guild.id
-            guild = await self.service.get_guild_by_id(guild_id)
-            if not guild:
-                raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
+            await self.service.get_guild_by_id(guild_id)
             player_to_add = await self.service.get_player_by_name(player)
             clan_to_join = await self.service.get_clan_by_name(clan)
             await self.service.add_player_to_clan(clan_to_join.clan_id, player_to_add.player_id)
             await interaction.response.send_message(f"Joined __{clan}__ under player: **{player}**.")
-        except (ObjectDoesntExistsInDBError, ObjectExistsInDBError, ParameterIsNullError, PlayerAlreadyInClanError, TableEntryDoesntExistsError) as e:
+        except (ObjectDoesntExistsInDBError, ObjectExistsInDBError, ParameterIsNullError, PlayerAlreadyInClanError,
+                ObjectDoesntExistsInDBError) as e:
             await interaction.response.send_message(e)
 
     @app_commands.command(description="Remove player from clan")
@@ -163,16 +148,13 @@ class ClanGroup(app_commands.Group):
                     if user_role.id == role[2]:
                         player_to_remove = await self.service.get_player_by_name(player)
                         from_clan = await self.service.get_clan_by_name(clan)
-                        await self.service.remove_player_from_clan(from_clan.clan_id , player_to_remove.player_id)
-                        await interaction.response.send_message(f"Removed **{player}** from clan: **{clan}**.")
-                        break
-                else:
-                    continue
-                # This will be executed only if the inner loop was terminated by break
-                break
+                        await self.service.remove_player_from_clan(from_clan.clan_id, player_to_remove.player_id)
+                        return await interaction.response.send_message(f"Removed **{player}** from clan: **{clan}**.")
 
-            await interaction.response.send_message(f"You don't have permission to use this command!")
-        except (ObjectDoesntExistsInDBError, ParameterIsNullError, PlayerNotInClanError, TableEntryDoesntExistsError) as e:
+            return await interaction.response.send_message(f"You don't have permission to use this command!")
+        except (
+                ObjectDoesntExistsInDBError, ParameterIsNullError, PlayerNotInClanError,
+                ObjectDoesntExistsInDBError) as e:
             await interaction.response.send_message(e)
 
     @app_commands.command(name="endcb", description="Ends cb")
@@ -189,18 +171,15 @@ class ClanGroup(app_commands.Group):
                     if user_role.id == role[2]:
                         clans = await self.service.get_clans(guild_id)
                         for clan in clans:
-                            cb = await self.service.get_clan_battle_active_by_clan_id(clan.id)
+                            cb = await self.service.get_clan_battle_active_by_clan_id(clan.clan_id)
                             cb.active = False
                             await self.service.update_clan_batte(cb)
-                            await interaction.response.send_message(f"Clan battle {cb.name} has ended")
-                        break
-                else:
-                    continue
-                # This will be executed only if the inner loop was terminated by break
-                break
+                            return await interaction.response.send_message(f"Clan battle {cb.name} has ended")
 
-            await interaction.response.send_message(f"You don't have permission to use this command!")
-        except (ObjectDoesntExistsInDBError, ParameterIsNullError, PlayerNotInClanError, TableEntryDoesntExistsError) as e:
+            return await interaction.response.send_message(f"You don't have permission to use this command!")
+        except (
+                ObjectDoesntExistsInDBError, ParameterIsNullError, PlayerNotInClanError,
+                ObjectDoesntExistsInDBError) as e:
             await interaction.response.send_message(e)
 
     @app_commands.command(name="editlap", description="Edits lap")
@@ -245,15 +224,13 @@ class ClanGroup(app_commands.Group):
                             await update_bosses_when_tier_change(self.service, cb, boss_char, boss_tier, False)
 
                         await self.service.update_clan_batte(cb)
-                        await interaction.response.send_message(f"You have changed lap to {lap} and tier to {boss_tier}")
-                        break
-                else:
-                    continue
-                # This will be executed only if the inner loop was terminated by break
-                break
+                        return await interaction.response.send_message(
+                            f"You have changed lap to {lap} and tier to {boss_tier}")
 
-            await interaction.response.send_message(f"You don't have permission to use this command!")
-        except (ObjectDoesntExistsInDBError, ParameterIsNullError, PlayerNotInClanError, TableEntryDoesntExistsError) as e:
+            return await interaction.response.send_message(f"You don't have permission to use this command!")
+        except (
+                ObjectDoesntExistsInDBError, ParameterIsNullError, PlayerNotInClanError,
+                ObjectDoesntExistsInDBError) as e:
             await interaction.response.send_message(e)
 
     @app_commands.command(name="changeboss", description="Changes current boss")
@@ -282,15 +259,12 @@ class ClanGroup(app_commands.Group):
                         boss.active = True
                         boss = await self.service.update_boss(boss)
 
-                        await interaction.response.send_message(f"You have changed active boss to {boss.name}")
-                        break
-                else:
-                    continue
-                # This will be executed only if the inner loop was terminated by break
-                break
+                        return await interaction.response.send_message(f"You have changed active boss to {boss.name}")
 
-            await interaction.response.send_message(f"You don't have permission to use this command!")
-        except (ObjectDoesntExistsInDBError, ParameterIsNullError, PlayerNotInClanError, TableEntryDoesntExistsError) as e:
+            return await interaction.response.send_message(f"You don't have permission to use this command!")
+        except (
+                ObjectDoesntExistsInDBError, ParameterIsNullError, PlayerNotInClanError,
+                ObjectDoesntExistsInDBError) as e:
             await interaction.response.send_message(e)
 
     @app_commands.command(name="edithits", description="Changes hits for player")
@@ -312,7 +286,7 @@ class ClanGroup(app_commands.Group):
 
                         clans = await self.service.get_clan_by_guild(guild_id)
                         player = await self.service.get_player_by_name(player_name)
-                        clan_player = await self.service.get_clan_player(player.id)
+                        clan_player = await self.service.get_clan_player(player.player_id)
                         clan = clan_player[1]
                         if clan not in clans:
                             await interaction.response.send_message(f"Player: {player_name} is not in any of clans "
@@ -325,17 +299,37 @@ class ClanGroup(app_commands.Group):
                         pcdi.hits = hits
                         await self.service.update_pcdi(pcdi)
 
-                        await interaction.response.send_message(f"You have changed today\'s hits to {hits} for "
-                                                                f"{player_name}")
-                        break
-                else:
-                    continue
-                # This will be executed only if the inner loop was terminated by break
-                break
+                        return await interaction.response.send_message(f"You have changed today\'s hits to {hits} for "
+                                                                       f"{player_name}")
 
-            await interaction.response.send_message(f"You don't have permission to use this command!")
-        except (ObjectDoesntExistsInDBError, ParameterIsNullError, PlayerNotInClanError, TableEntryDoesntExistsError) as e:
+            return await interaction.response.send_message(f"You don't have permission to use this command!")
+        except (
+                ParameterIsNullError, PlayerNotInClanError, ObjectDoesntExistsInDBError) as e:
             await interaction.response.send_message(e)
+
+    @app_commands.command(name="deletecb", description="Delete clan battle and related information")
+    @app_commands.describe(cb_name='Clan battle name')
+    async def delete_cb(self, interaction: discord.Interaction, cb_name: str):
+        try:
+            guild_id = interaction.guild.id
+            await self.service.get_guild_by_id(guild_id)
+            user_roles = interaction.user.roles
+            roles = await self.service.get_guild_admin(guild_id)
+            roles += await self.service.get_guild_lead(guild_id)
+            for user_role in user_roles:
+                for role in roles:
+                    if user_role.id == role[2]:
+                        clans = await self.service.get_clans(guild_id)
+                        for i in range(len(clans)):
+                            await self.service.delete_clan_battle_by_name_and_clan_id(cb_name, clans[i][0])
+                            return await interaction.response.send_message(
+                                f'You have deleted cb: {cb_name} and all related information '
+                                f'for clans in your server')
+
+            return await interaction.response.send_message(f"You don't have permission to use this command!")
+
+        except ObjectDoesntExistsInDBError as e:
+            return await interaction.response.send_message(e)
 
 
 async def setup(bot):

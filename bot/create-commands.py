@@ -1,6 +1,6 @@
 import discord
 from discord import app_commands
-from exceptions.exceptions import ParameterIsNullError, ObjectExistsInDBError, TableEntryDoesntExistsError, \
+from exceptions.exceptions import ParameterIsNullError, ObjectExistsInDBError, \
     PlayerCBDayInfoLimitOfEntriesForPlayerAndCBReached, ClanBattleCantHaveMoreThenFiveDaysError, \
     ObjectDoesntExistsInDBError, PlayerAlreadyInClanError, PlayerNotInClanError, NoActiveCBError
 from service.service import Service
@@ -24,7 +24,7 @@ class CreateGroup(app_commands.Group):
             guild_id = interaction.guild.id
             guild = await self.service.get_guild_by_id(guild_id)
             if not guild:
-                raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
+                raise ObjectDoesntExistsInDBError("Server doesn't exist! Please run **/server setup**")
             user_roles = interaction.user.roles
             roles = await self.service.get_guild_admin(guild_id)
             roles += await self.service.get_guild_lead(guild_id)
@@ -39,7 +39,7 @@ class CreateGroup(app_commands.Group):
                 # This will be executed only if the inner loop was terminated by break
                 break
             # await interaction.response.send_message('blabla')
-        except (ObjectExistsInDBError, TableEntryDoesntExistsError) as e:
+        except (ObjectExistsInDBError, ObjectDoesntExistsInDBError) as e:
             await interaction.response.send_message(e)
 
     @app_commands.command(description="Create player")
@@ -51,7 +51,7 @@ class CreateGroup(app_commands.Group):
             player = await self.service.create_player(player_name, interaction.user.id)
             await interaction.response.send_message(f"Created player: **{player.name}**")
 
-        except (TableEntryDoesntExistsError, ObjectExistsInDBError) as e:
+        except (ObjectDoesntExistsInDBError, ObjectExistsInDBError) as e:
             await interaction.response.send_message(e)
 
     @app_commands.command(description="Create clan battle")
@@ -68,17 +68,17 @@ class CreateGroup(app_commands.Group):
                 for role in roles:
                     if user_role.id == role[2]:
                         clans = await self.service.get_clans(guild_id)
-                        for i in range(len(clans)):
-                            exists = await self.service.exists_cb_in_date_by_clan_id(start_date, clans[i].clan_id)
+                        for clan in clans:
+                            exists = await self.service.exists_cb_in_date_by_clan_id(start_date, clan.clan_id)
                             if exists:
                                 error_message = f'Cant create clan battle because there is clan battle at this date: ' \
                                                 f'{exists}'
                                 await interaction.response.send_message(error_message)
-                            cb = await self.service.create_clan_battle(clans[i][0], cb_name, start_date)
+                            cb = await self.service.create_clan_battle(clan.clan_id, cb_name, start_date)
                             cb.active = True
                             cb = await self.service.update_clan_batte(cb)
 
-                            clan_players = await self.service.get_players_from_clan(clans[i][0])
+                            clan_players = await self.service.get_players_from_clan(clan.clan_id)
                             for clan_player in clan_players:
                                 for _ in range(5):
                                     await self.service.create_player_cb_day_info(cb.cb_id, clan_player.player_id)
@@ -115,8 +115,8 @@ class CreateGroup(app_commands.Group):
                     continue
                 # This will be executed only if the inner loop was terminated by break
                 break
-        except (ObjectExistsInDBError, TableEntryDoesntExistsError, PlayerCBDayInfoLimitOfEntriesForPlayerAndCBReached
-                , TableEntryDoesntExistsError, ValueError) as e:
+        except (ObjectExistsInDBError, ObjectDoesntExistsInDBError, PlayerCBDayInfoLimitOfEntriesForPlayerAndCBReached
+                , ObjectDoesntExistsInDBError, ValueError) as e:
             await interaction.response.send_message(e)
 
     @app_commands.command(description="Create team composition")
@@ -139,7 +139,7 @@ class CreateGroup(app_commands.Group):
             else:
                 await interaction.response.send_message(f"Today is not cb day")
 
-        except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDaysError, ValueError, TableEntryDoesntExistsError,
+        except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDaysError, ValueError, ObjectDoesntExistsInDBError,
                 NoActiveCBError) as e:
             await interaction.response.send_message(e)
 

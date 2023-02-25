@@ -1,6 +1,6 @@
 import discord
 from discord import app_commands
-from exceptions.exceptions import ParameterIsNullError, ObjectExistsInDBError, TableEntryDoesntExistsError, \
+from exceptions.exceptions import ParameterIsNullError, ObjectExistsInDBError, \
     PlayerCBDayInfoLimitOfEntriesForPlayerAndCBReached, ClanBattleCantHaveMoreThenFiveDaysError, ObjectDoesntExistsInDBError, \
     PlayerAlreadyInClanError, PlayerNotInClanError
 from service.service import Service
@@ -30,30 +30,29 @@ class PlayerGroup(app_commands.Group):
             await self.service.delete_player_by_discord_id_name(interaction.user.id, player)
 
             await interaction.response.send_message(f"You have deleted player: {player}")
-        except TableEntryDoesntExistsError as e:
+        except ObjectDoesntExistsInDBError as e:
             await interaction.response.send_message(e)
 
-
-    @app_commands.command(description="Check info about specified player")
-    @app_commands.describe(player_name="Player to check")
-    # @app_commands.autocomplete(choice=player_names_autocomplete)
-    async def check(self, interaction: discord.Interaction, player_name: str): #, choice: str
-        """ Check status of player """
-        try:
-            guild = await self.service.get_guild_by_id(interaction.guild.id)
-            if not guild:
-                raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
-            clan = await self.service.get_clan_by_guild(guild.guild_id)
-            if not clan:
-                raise TableEntryDoesntExistsError('Your discord doesnt have clan created')
-
-            player_in_clan = await self.service.get_player_by_name_and_clan_id(player_name, clan.clan_id)
-            if player_in_clan:
-                await interaction.response.send_message(f'Checking Player: **{player_in_clan.name}** in Clan: {clan.name}')
-            else:
-                await interaction.response.send_message(f'There is no player: {player_name} in clan')
-        except (ObjectDoesntExistsInDBError, PlayerNotInClanError, TableEntryDoesntExistsError) as e:
-            await interaction.response.send_message(e)
+# idk if we need this commands we have clan check get hitters etc
+    # @app_commands.command(description="Check info about specified player")
+    # @app_commands.describe(player_name="Player to check")
+    # # @app_commands.autocomplete(choice=player_names_autocomplete)
+    # async def check(self, interaction: discord.Interaction, player_name: str): #, choice: str
+    #     """ Check status of player """
+    #     try:
+    #         await self.service.get_guild_by_id(interaction.guild.id)
+    #
+    #         clan = await self.service.get_clan_by_guild(guild.guild_id)
+    #         if not clan:
+    #             raise ObjectDoesntExistsInDBError('Your discord doesnt have clan created')
+    #
+    #         player_in_clan = await self.service.get_player_by_name_and_clan_id(player_name, clan.clan_id)
+    #         if player_in_clan:
+    #             await interaction.response.send_message(f'Checking Player: **{player_in_clan.name}** in Clan: {clan.name}')
+    #         else:
+    #             await interaction.response.send_message(f'There is no player: {player_name} in clan')
+    #     except (ObjectDoesntExistsInDBError, PlayerNotInClanError, ObjectDoesntExistsInDBError) as e:
+    #         await interaction.response.send_message(e)
 
 
 async def setup(bot):

@@ -1,5 +1,5 @@
 import aiosqlite
-from exceptions.exceptions import ParameterIsNullError, ObjectExistsInDBError, TableEntryDoesntExistsError, \
+from exceptions.exceptions import ParameterIsNullError, ObjectExistsInDBError, \
     PlayerCBDayInfoLimitOfEntriesForPlayerAndCBReached, ClanBattleCantHaveMoreThenFiveDaysError, \
     ObjectDoesntExistsInDBError, PlayerAlreadyInClanError, PlayerNotInClanError, ThereIsAlreadyActiveCBError, \
     DesiredBossIsDeadError, CantBookDeadBossError, NoActiveCBError
@@ -45,7 +45,7 @@ class Service:
             result = await cur.fetchone()
 
         if not result:
-            raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
+            raise ObjectDoesntExistsInDBError("Server doesn't exist! Please run **/server setup**")
 
         return Guild(result[0])
 
@@ -55,7 +55,7 @@ class Service:
             raise ParameterIsNullError("Guild id can't be empty!")
         guild = await self.get_guild_by_id(guild_id)
         if not guild:
-            raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
+            raise ObjectDoesntExistsInDBError("Server doesn't exist! Please run **/server setup**")
 
         if not role_id:
             raise ParameterIsNullError("Role id can't be empty!")
@@ -86,7 +86,7 @@ class Service:
 
         guild = await self.get_guild_by_id(guild_id)
         if not guild:
-            raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
+            raise ObjectDoesntExistsInDBError("Server doesn't exist! Please run **/server setup**")
 
         if not role_id:
             raise ParameterIsNullError("Role id can't be empty!")
@@ -97,7 +97,7 @@ class Service:
                               {'role_id': role_id, 'guild_id': guild_id})
             result = await cur.fetchone()
             if not result:
-                raise TableEntryDoesntExistsError("Role is not registered as an admin!")
+                raise ObjectDoesntExistsInDBError("Role is not registered as an admin!")
             await cur.execute(""" DELETE FROM GuildAdmin WHERE role_id = ? and guild_id = ? """, (role_id, guild_id))
             await conn.commit()
         return True
@@ -108,7 +108,7 @@ class Service:
             raise ParameterIsNullError("Guild id can't be empty!")
         guild = await self.get_guild_by_id(guild_id)
         if not guild:
-            raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
+            raise ObjectDoesntExistsInDBError("Server doesn't exist! Please run **/server setup**")
 
         if not role_id:
             raise ParameterIsNullError("Role id can't be empty!")
@@ -139,7 +139,7 @@ class Service:
 
         guild = await self.get_guild_by_id(guild_id)
         if not guild:
-            raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
+            raise ObjectDoesntExistsInDBError("Server doesn't exist! Please run **/server setup**")
 
         if not role_id:
             raise ParameterIsNullError("Role id can't be empty!")
@@ -152,7 +152,7 @@ class Service:
             result = await cur.fetchone()
 
             if not result:
-                raise TableEntryDoesntExistsError("Role is not registered as an lead!")
+                raise ObjectDoesntExistsInDBError("Role is not registered as an lead!")
 
             await cur.execute(""" DELETE FROM GuildLead WHERE role_id = ? and guild_id = ? """, (role_id, guild_id))
             await conn.commit()
@@ -164,7 +164,7 @@ class Service:
             raise ParameterIsNullError("Guild id can't be empty!")
         guild = await self.get_guild_by_id(guild_id)
         if not guild:
-            raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
+            raise ObjectDoesntExistsInDBError("Server doesn't exist! Please run **/server setup**")
 
         async with aiosqlite.connect(self.db) as conn:
             cur = await conn.cursor()
@@ -173,7 +173,7 @@ class Service:
             results = await cur.fetchall()
 
         if not results:
-            raise TableEntryDoesntExistsError(
+            raise ObjectDoesntExistsInDBError(
                 "There are no roles set up for your server! Please run **/server addadminrole**")
 
         guild_role_array = [result for result in results]
@@ -186,7 +186,7 @@ class Service:
             raise ParameterIsNullError("Guild id can't be empty!")
         guild = await self.get_guild_by_id(guild_id)
         if not guild:
-            raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
+            raise ObjectDoesntExistsInDBError("Server doesn't exist! Please run **/server setup**")
 
         async with aiosqlite.connect(self.db) as conn:
             cur = await conn.cursor()
@@ -195,7 +195,7 @@ class Service:
             results = await cur.fetchall()
 
         if not results:
-            raise TableEntryDoesntExistsError(
+            raise ObjectDoesntExistsInDBError(
                 "There are no roles set up for your server! Please run **/server addadminrole** and/or **/server addleadrole**")
 
         guild_role_array = [result for result in results]
@@ -209,7 +209,7 @@ class Service:
 
         guild = await self.get_guild_by_id(guild_id)
         if not guild:
-            raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
+            raise ObjectDoesntExistsInDBError("Server doesn't exist! Please run **/server setup**")
 
         async with aiosqlite.connect(self.db) as conn:
             cur = await conn.cursor()
@@ -256,11 +256,11 @@ class Service:
             result = await cur.fetchone()
 
         if not result:
-            raise TableEntryDoesntExistsError("Clan doesn't exist!")
+            raise ObjectDoesntExistsInDBError("Clan doesn't exist!")
 
         return Clan(result[0], result[1], result[2])
 
-    async def get_clan_by_guild(self, guild_id: int) -> Clan or None:
+    async def get_clan_by_guild(self, guild_id: int) -> list:
         """ Gets Clan by guild """
         if not guild_id:
             raise ParameterIsNullError("Guild id cant be empty")
@@ -269,12 +269,12 @@ class Service:
             cur = await conn.cursor()
 
             await cur.execute(""" SELECT * FROM Clan WHERE guild_id=:guild """, {'guild': guild_id})
-            result = await cur.fetchone()
+            results = await cur.fetchall()
 
-        if not result:
-            TableEntryDoesntExistsError('There is no clan for this server')
+        if not results:
+            ObjectDoesntExistsInDBError('There is no clan for this server')
 
-        return Clan(result[0], result[1], result[2])
+        return [Clan(result[0], result[1], result[2]) for result in results]
 
     async def get_clans(self, guild_id: int) -> list:
         """ Gets all clans in guild """
@@ -284,7 +284,7 @@ class Service:
             results = await cur.fetchall()
 
         if not results:
-            TableEntryDoesntExistsError('There is no clan for this server')
+            ObjectDoesntExistsInDBError('There is no clan for this server')
 
         return [Clan(result[0], result[1], result[2]) for result in results]
 
@@ -303,7 +303,7 @@ class Service:
         """ Update clan table """
         clan_to_be_updated = await self.get_clan_by_id(clan.clan_id)
         if not clan_to_be_updated:
-            raise TableEntryDoesntExistsError(f'clan id {clan.clan_id}')
+            raise ObjectDoesntExistsInDBError(f'clan id {clan.clan_id}')
 
         if not (clan.name and clan.guild_id):
             raise ParameterIsNullError("Clan name cant be empty")
@@ -332,7 +332,7 @@ class Service:
     #         raise ParameterIsNullError("New clan name can't be empty!")
     #     clan_to_be_updated = await self.get_clan_by_name(clan)
     #     if not clan_to_be_updated:
-    #         raise TableEntryDoesntExistsError("Clan doesn't exist!")
+    #         raise ObjectDoesntExistsInDBError("Clan doesn't exist!")
     #
     #     async with aiosqlite.connect(self.db) as conn:
     #         cur = await conn.cursor()
@@ -438,7 +438,7 @@ class Service:
             result = await cur.fetchone()
 
         if not result:
-            raise TableEntryDoesntExistsError("Player doesn't exist!")
+            raise ObjectDoesntExistsInDBError("Player doesn't exist!")
 
         return Player(result[0], result[1], result[2])
 
@@ -459,7 +459,7 @@ class Service:
             result = await cur.fetchone()
 
         if not result:
-            raise TableEntryDoesntExistsError('Player doesnt exist')
+            raise ObjectDoesntExistsInDBError('Player doesnt exist')
 
         return Player(result[0], result[1], result[2])
 
@@ -499,7 +499,7 @@ class Service:
                               {'player_name': player_name})
             result = await cur.fetchone()
         if not result:
-            raise TableEntryDoesntExistsError('Player doesnt exist')
+            raise ObjectDoesntExistsInDBError('Player doesnt exist')
         return Player(result[0], result[1], result[2])
 
     async def get_player_by_discord_id(self, discord_id: int) -> list:
@@ -565,7 +565,7 @@ class Service:
 
         player_to_be_updated = await self.get_player_by_id(player.player_id)
         if not player_to_be_updated:
-            raise TableEntryDoesntExistsError(f'player id {player.player_id}')
+            raise ObjectDoesntExistsInDBError(f'player id {player.player_id}')
 
         if not (player.name and player.discord_id):
             raise ParameterIsNullError("Player name and discord_id cant be empty")
@@ -596,7 +596,7 @@ class Service:
             if player_iter.name == name:
                 player = player_iter
         if not player:
-            raise TableEntryDoesntExistsError(f'You dont have player with name: {name}')
+            raise ObjectDoesntExistsInDBError(f'You dont have player with name: {name}')
 
         player.discord_id = None
         await self.update_player(player)
@@ -661,7 +661,7 @@ class Service:
                               {'player_id': player_id})
             result = await cur.fetchone()
         if not result:
-            return None
+            raise ObjectDoesntExistsInDBError(f'Player is not in clan')
 
         return Player(result[0], result[1], result[2]), Clan(result[3], result[4], result[5])
 
@@ -822,7 +822,7 @@ class Service:
         clan_battle_to_be_updated = await self.get_clan_battle_by_id(clan_battle.cb_id)
 
         if not clan_battle_to_be_updated:
-            raise TableEntryDoesntExistsError(f'cb id {clan_battle_to_be_updated.clan_id}')
+            raise ObjectDoesntExistsInDBError(f'cb id {clan_battle_to_be_updated.clan_id}')
 
         if not (clan_battle.name and clan_battle.lap and clan_battle.tier):
             raise ParameterIsNullError("ClanBattle name, lap, tier cant be empty")
@@ -851,7 +851,7 @@ class Service:
         """ Deletes team composition, boss bookings, boss, pcdi connected to cb and cb itself """
         cb = await self.get_clan_battle_by_name_and_clan_id(cb_name, clan_id)
         if not cb:
-            raise TableEntryDoesntExistsError(f'Clan battle {cb_name} doesnt exists in your clan')
+            raise ObjectDoesntExistsInDBError(f'Clan battle {cb_name} doesnt exists in your clan')
         pcdis = await self.get_pcdis_by_cb_id(cb.cb_id)
         bosses = await self.get_bosses(cb.cb_id)
 
@@ -1011,7 +1011,7 @@ class Service:
               Player(result[8], result[10], result[11])) for result in
              results])
 
-    async def get_pcdi_by_cb_id_and_hits(self, cb_id: int, day: int) -> tuple:
+    async def get_pcdi_by_cb_id_and_hits(self, cb_id: int, day: int) -> list:
         """ Gets players and hits left that are more then 0 """
         if not (cb_id and day):
             raise ParameterIsNullError("Cb id and day cant be empty")
@@ -1025,19 +1025,14 @@ class Service:
                                 WHERE pcdi.cb_id = :cb_id AND pcdi.hits > 0 AND pcdi.cb_day=:cb_day""",
                               {'cb_id': cb_id, 'cb_day': day})
             results = await cur.fetchall()
-
-        return tuple(
-            [(PlayerCBDayInfo(result[0], result[6], result[7], result[8], overflow=result[1], ovf_time=result[2],
-                              ovf_comp=result[3], hits=result[4], reset=result[5]),
-              Player(result[8], result[10], result[11])) for result in
-             results])
+        return [result for result in results]
 
     async def update_pcdi(self, pcdi: PlayerCBDayInfo) -> PlayerCBDayInfo:
         """ Update pcdi table """
         pcdi_to_be_updated = await self.get_pcdi_by_id(pcdi.pcbdi_id)
 
         if not pcdi_to_be_updated:
-            raise TableEntryDoesntExistsError(f'pcdi id {pcdi.pcbdi_id}')
+            raise ObjectDoesntExistsInDBError(f'pcdi id {pcdi.pcbdi_id}')
 
         if not (pcdi_to_be_updated.hits and pcdi_to_be_updated.cb_day):
             raise ParameterIsNullError("Pcdi hits, reset and cb_day cant be empty")
@@ -1085,7 +1080,7 @@ class Service:
             result = await cur.fetchone()
 
         if not result:
-            return None
+            raise ValueError()
 
         return result[0]
 
@@ -1161,7 +1156,7 @@ class Service:
 
         tc_to_be_updated = await self.get_team_composition_by_id(tc.tc_id)
         if not tc_to_be_updated:
-            raise TableEntryDoesntExistsError(f'Team composition id {tc.tc_id}')
+            raise ObjectDoesntExistsInDBError(f'Team composition id {tc.tc_id}')
 
         if not tc.name:
             raise ParameterIsNullError("Team composition  name, used cant be empty")
@@ -1256,7 +1251,7 @@ class Service:
             result = await cur.fetchone()
 
         if not result:
-            return None
+            raise ValueError('No boss is active (how?????)')
 
         return Boss(result[0], result[1], result[2], result[3], result[4], result[5])
 
@@ -1274,7 +1269,7 @@ class Service:
 
         boss_to_be_updated = await self.get_boss_by_id(boss.boss_id)
         if not boss_to_be_updated:
-            raise TableEntryDoesntExistsError(f'Boss id {boss.boss_id}')
+            raise ObjectDoesntExistsInDBError(f'Boss id {boss.boss_id}')
 
         if not (boss.name and boss.boss_number and boss.ranking):
             raise ParameterIsNullError("Boss name, boss_number, ranking cant be empty")
@@ -1304,7 +1299,6 @@ class Service:
                             DELETE FROM Boss WHERE cb_id=:cb_id""",
                               {'cb_id': cb_id})
             await conn.commit()
-
 
     async def create_boss_booking(self, lap: int, curr_lap: int, overflow: bool, comp_name: str,
                                   boss_id: int, player_id: int, cb_id: int, ovf_time='') -> BossBooking:
@@ -1415,7 +1409,7 @@ class Service:
         """ Update boss booking"""
         bb_to_be_updated = await self.get_boss_booking_by_id(bb.boss_booking_id)
         if not bb_to_be_updated:
-            raise TableEntryDoesntExistsError(f'Boss booking id {bb.boss_booking_id}')
+            raise ObjectDoesntExistsInDBError(f'Boss booking id {bb.boss_booking_id}')
 
         if not (bb.lap and bb.comp_name):
             raise ParameterIsNullError("Boss booking lap, comp_name cant be empty")

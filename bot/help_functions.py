@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup
 from fake_useragent import UserAgent  # pip install fake-useragent
 import aiohttp
 from exceptions.exceptions import ObjectDoesntExistsInDBError, ParameterIsNullError, \
-    ClanBattleCantHaveMoreThenFiveDaysError, TableEntryDoesntExistsError
+    ClanBattleCantHaveMoreThenFiveDaysError, NoActiveCBError, CantBookDeadBossError
 
 
 user_agent = UserAgent(browsers=["chrome", "edge", "firefox", "safari", "opera"])
@@ -25,12 +25,16 @@ def get_cb_day(cb):
 
 async def update_bosses_when_tier_change(service, cb, boss_char, boss_tier, change_active=True):
     bosses = await service.get_bosses(cb.cb_id)
+    active_boss = None
     for boss_iter in bosses:
         boss_iter.name = f'{boss_char}{boss_iter.boss_number}'
         boss_iter.ranking = boss_tier
         if boss_iter.boss_number == 1 and change_active:
             boss_iter.active = True
+            active_boss = boss_iter
         await service.update_boss(boss_iter)
+    active_boss = active_boss if active_boss else await service.get_active_boss_by_cb_id(cb.cb_id)
+    return active_boss
 
 
 async def update_lap_and_tier(service, interaction, cb, pcdi):
@@ -50,14 +54,17 @@ async def update_lap_and_tier(service, interaction, cb, pcdi):
             boss_tier = 2
             boss_char = 'B'
             await update_bosses_when_tier_change(service, cb, boss_char, boss_tier)
+            boss = await service.get_active_boss_by_cb_id(cb.cb_id)
         elif cb.lap == tier3_lap:
             boss_tier = 3
             boss_char = 'C'
             await update_bosses_when_tier_change(service, cb, boss_char, boss_tier)
+            boss = await service.get_active_boss_by_cb_id(cb.cb_id)
         elif cb.lap == tier4_lap:
             boss_tier = 4
             boss_char = 'D'
             await update_bosses_when_tier_change(service, cb, boss_char, boss_tier)
+            boss = await service.get_active_boss_by_cb_id(cb.cb_id)
         else:
             boss = await service.get_boss_by_boss_number(1, cb.cb_id)
             boss.active = True
@@ -94,20 +101,30 @@ def multiple_players_check(player_name, players):
     return player
 
 
-async def hit_kill(service, interaction, tc_name, player_name, ovf_time=''):
+async def hit_kill(service, interaction, tc_name, player_name, ovf_time='', pilot=False):
     """ help function for hit and kill functions """
     try:
-        players = await service.get_player_by_discord_id(interaction.user.id)
-        player = multiple_players_check(player_name, players)
-        clan_player = await service.get_clan_player(player.player_id)
-        clan = clan_player[1]
+        if not pilot:
+            players = await service.get_player_by_discord_id(interaction.user.id)
+            player = multiple_players_check(player_name, players)
+            clan_player = await service.get_clan_player(player.player_id)
+            clan = clan_player[1]
+        else:
+            player = await service.get_player_by_name(player_name)
+            clan_player = await service.get_clan_player(player.player_id)
+            clan = clan_player[1]
+            guild = await service.get_guild_by_id(clan.guild_id)
+            if interaction.guild.id != guild.guild_id:
+                return await interaction.response.send_message(f"You cant pilot {player_name} because they are not in "
+                                                               f"this disocrd server")
+
         cb = await service.get_clan_battle_active_by_clan_id(clan.clan_id)
         day_of_cb = get_cb_day(cb)
 
         if day_of_cb:
             pcdi = await service.get_pcdi_by_player_id_and_cb_id_and_day(player.player_id, cb.cb_id, day_of_cb)
             if pcdi.overflow:
-                return await interaction.response.send_message(f"You have oveflow active, you cant use hit "
+                return await interaction.response.send_message(f"You have overflow active, you cant use hit "
                                                                f"command")
             if pcdi.hits == 0:
                 return await interaction.response.send_message(f"You dont have any hits left")
@@ -138,7 +155,7 @@ async def hit_kill(service, interaction, tc_name, player_name, ovf_time=''):
                     return await interaction.response.send_message(f"You recorded your hit with: {tc.name}")
         else:
             await interaction.response.send_message(f"Today is not cb day")
-    except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDaysError, TableEntryDoesntExistsError) as e:
+    except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDaysError, ObjectDoesntExistsInDBError) as e:
         return await interaction.response.send_message(e)
 
 
@@ -195,25 +212,28 @@ async def book_boss_help(service, interaction, ovf_time, lap, boss_num, comp_nam
         clan_player = await service.get_clan_player(player.player_id)
         clan = clan_player[1]
         cb = await service.get_clan_battle_active_by_clan_id(clan.clan_id)
+        day_of_cb = get_cb_day(cb)
 
-        boss = await service.get_boss_by_boss_number(boss_num_int, cb.cb_id)
-        boss_char = boss_char_by_lap(lap_int)
-        boss_name = f'{boss_char}{boss.name[1:]}'
-        player = multiple_players_check(player_name, players)
-        if ovf_time:
-            booking = await service.create_boss_booking(lap_int, cb.lap, True, comp_name, boss.boss_id,
-                                                        player.player_id, cb.cb_id, ovf_time=ovf_time)
-            return await interaction.response.send_message(
-                f'You booked comp: {booking.comp_name} with ovf time: {ovf_time}, for boss: {boss_name}'
-                f' in lap: {lap}'
-            )
+        if day_of_cb:
+            boss = await service.get_boss_by_boss_number(boss_num_int, cb.cb_id)
+            boss_char = boss_char_by_lap(lap_int)
+            boss_name = f'{boss_char}{boss.name[1:]}'
+            player = multiple_players_check(player_name, players)
+            if ovf_time:
+                booking = await service.create_boss_booking(lap_int, cb.lap, True, comp_name, boss.boss_id,
+                                                            player.player_id, cb.cb_id, ovf_time=ovf_time)
+                return await interaction.response.send_message(
+                    f'You booked comp: {booking.comp_name} with ovf time: {ovf_time}, for boss: {boss_name}'
+                    f' in lap: {lap}'
+                )
+            else:
+                booking = await service.create_boss_booking(lap_int, cb.lap, False, comp_name, boss.boss_id,
+                                                            player.player_id, cb.cb_id)
+                return await interaction.response.send_message(
+                    f'You booked comp: {booking.comp_name}, for boss: {boss_name} in lap: {lap}'
+                )
         else:
-            booking = await service.create_boss_booking(lap_int, cb.lap, False, comp_name, boss.boss_id,
-                                                        player.player_id, cb.cb_id)
-            return await interaction.response.send_message(
-                f'You booked comp: {booking.comp_name}, for boss: {boss_name} in lap: {lap}'
-            )
-
-    except (ObjectDoesntExistsInDBError, ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDaysError,
-            ValueError) as e:
+            await interaction.response.send_message(f"Today is not cb day")
+    except (ObjectDoesntExistsInDBError, CantBookDeadBossError, NoActiveCBError, ParameterIsNullError,
+            ClanBattleCantHaveMoreThenFiveDaysError, ValueError) as e:
         await interaction.response.send_message(e)

@@ -1,6 +1,6 @@
 import discord
 from discord import app_commands
-from exceptions.exceptions import ParameterIsNullError, ObjectExistsInDBError, TableEntryDoesntExistsError, \
+from exceptions.exceptions import ParameterIsNullError, ObjectExistsInDBError, \
     PlayerCBDayInfoLimitOfEntriesForPlayerAndCBReached, ClanBattleCantHaveMoreThenFiveDaysError, ObjectDoesntExistsInDBError, \
     PlayerAlreadyInClanError, PlayerNotInClanError
 from service.service import Service
@@ -50,10 +50,10 @@ class ServerGroup(app_commands.Group):
             guild_id = interaction.guild.id
             guild = await self.service.get_guild_by_id(guild_id)
             if not guild:
-                raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
+                raise ObjectDoesntExistsInDBError("Server doesn't exist! Please run **/server setup**")
             await self.service.add_admin_role(guild_id, role_id_int)
             await interaction.response.send_message(f"Added role: <@&{role_id}> to admin role", ephemeral=False)
-        except (ParameterIsNullError, ObjectExistsInDBError, TableEntryDoesntExistsError, ValueError) as e:
+        except (ParameterIsNullError, ObjectExistsInDBError, ObjectDoesntExistsInDBError, ValueError) as e:
             await interaction.response.send_message(e)
 
     @addadminrole.error
@@ -71,10 +71,10 @@ class ServerGroup(app_commands.Group):
             guild_id = interaction.guild.id
             guild = await self.service.get_guild_by_id(guild_id)
             if not guild:
-                raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
+                raise ObjectDoesntExistsInDBError("Server doesn't exist! Please run **/server setup**")
             await self.service.remove_admin_role(guild_id, role_id_int)
             await interaction.response.send_message(f"Removed role: <@&{role_id}> from admin role", ephemeral=False)
-        except (ParameterIsNullError, ObjectExistsInDBError, TableEntryDoesntExistsError, ValueError) as e:
+        except (ParameterIsNullError, ObjectExistsInDBError, ObjectDoesntExistsInDBError, ValueError) as e:
             await interaction.response.send_message(e)
 
     @removeadminrole.error
@@ -91,7 +91,7 @@ class ServerGroup(app_commands.Group):
             guild_id = interaction.guild.id
             guild = await self.service.get_guild_by_id(guild_id)
             if not guild:
-                raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
+                raise ObjectDoesntExistsInDBError("Server doesn't exist! Please run **/server setup**")
             user_roles = interaction.user.roles
             guild_admins = await self.service.get_guild_admin(guild_id)
             for user_role in user_roles:
@@ -101,7 +101,7 @@ class ServerGroup(app_commands.Group):
                         await interaction.response.send_message(f"Added <@&{role_id}> as a lead role!")
                         return
             await interaction.response.send_message(f"You don't have permission to use this command!")
-        except (ParameterIsNullError, ObjectExistsInDBError, TableEntryDoesntExistsError, ValueError) as e:
+        except (ParameterIsNullError, ObjectExistsInDBError, ObjectDoesntExistsInDBError, ValueError) as e:
             await interaction.response.send_message(e)
 
     @app_commands.command(description="Remove lead role")
@@ -112,7 +112,7 @@ class ServerGroup(app_commands.Group):
             guild_id = interaction.guild.id
             guild = await self.service.get_guild_by_id(guild_id)
             if not guild:
-                raise TableEntryDoesntExistsError("Server doesn't exist! Please run **/server setup**")
+                raise ObjectDoesntExistsInDBError("Server doesn't exist! Please run **/server setup**")
             user_roles = interaction.user.roles
             guild_admins = await self.service.get_guild_admin(guild_id)
             for user_role in user_roles:
@@ -122,7 +122,7 @@ class ServerGroup(app_commands.Group):
                         await interaction.response.send_message(f"Removed <@&{role_id}> from the lead role!")
                         return
             await interaction.response.send_message(f"You don't have permission to use this command!")
-        except (ParameterIsNullError, ObjectExistsInDBError, TableEntryDoesntExistsError, ValueError) as e:
+        except (ParameterIsNullError, ObjectExistsInDBError, ObjectDoesntExistsInDBError, ValueError) as e:
             await interaction.response.send_message(e)
 
 
