@@ -352,6 +352,10 @@ def run_discord_bot():
             cb = await service.get_clan_battle_active_by_clan_id(clan.clan_id)
             if not cb_day:
                 cb_day = get_cb_day(cb)
+
+            if not cb_day:
+                await interaction.response.send_message('Not a cb day')
+
             if 5 >= cb_day >= 1:
                 hits_left = await service.get_today_hits_left(cb_day, cb.cb_id)
                 ranking = await scrape_clan_rankings(clan.name)
@@ -381,6 +385,10 @@ def run_discord_bot():
 
             if not cb_day:
                 cb_day = get_cb_day(cb)
+
+            if not cb_day:
+                await interaction.response.send_message('Not a cb day')
+
             if 5 >= cb_day >= 1:
                 pcdi = await service.get_pcdi_by_player_id_and_cb_id_and_day(player.player_id, cb.cb_id, cb_day)
                 has_ovf = 'yes' if pcdi.overflow else 'no'
@@ -529,6 +537,8 @@ def run_discord_bot():
             cb = await service.get_clan_battle_active_by_clan_id(clan.clan_id)
             if not cb_day:
                 cb_day = get_cb_day(cb)
+            if not cb_day:
+                await interaction.response.send_message('Not a cb day')
             if 5 >= cb_day >= 1:
                 message_string = f'Day: {cb_day}\n'
                 hitters = await service.get_pcdi_by_cb_id_and_hits(cb.cb_id, cb_day)
