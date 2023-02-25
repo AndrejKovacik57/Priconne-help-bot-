@@ -54,55 +54,147 @@ def run_discord_bot():
             ephemeral=False)
 
     @client.tree.command(name="help")
-    async def help_func(interaction: discord.Interaction):
-        embed = discord.Embed(title="Marin Bot Commands", color=0x3083e3,
-                              description="""
-                Hi fellow **Cosplayer**! I'm a CB bot, designed to make your CB life easier!
+    @app_commands.describe(type='Basic | Server | Create | Clan | Player | CB | Admin | Lead')
+    async def help_func(interaction: discord.Interaction, type: str):
+                    # embed.set_author(name="Marin", icon_url=self.bot.user.avatar.url)
+            # embed.set_author(name="Marin")
+        if type == "Basic":
+            embed = discord.Embed(title="Marin Bot Commands - Basic", color=0x3083e3,
+                                description="""
+                    Hi fellow **Cosplayer**! I'm a CB bot, designed to make your CB life easier!
 
-                **help**: Shows list of commands.
-                **invite**: Bot invite link *(WIP)*.
-            """)
-        # embed.set_author(name="Marin", icon_url=self.bot.user.avatar.url)
-        # embed.set_author(name="Marin")
-        embed.add_field(name="__Server__",
-                        value="""
-                **server setup**: Register server in bot. **MUST** run or else bot will not operate.
-                **server addadminrole `role_id`**: Add role *(role ID)* as **admin role** in bot.
-                **server removeadminrole `role_id`**: Remove role *(role ID)* from **admin role** in bot.
-                **server addleadrole `role_id`**: Add role *(role ID)* as **lead role** in bot.
-                **server removeleadrole `role_id`**: Remove role *(role ID)* from **lead role** in bot.
-            """, inline=False)
-        embed.add_field(name="__Create__",
-                        value="""
-                **create clan `clan`**: Create clan called `clan`.
-                **create player `player`**: Create player called `player`.
-                **create cb `cb_name` `start_date`**: Create CB for all clans for `cb_name` starting on `start_date`.
-            """, inline=False)
-        embed.add_field(name="__Clan__",
-                        value="""
-                **clan list**:  Get list of clans.
-                **clan updatename `clan` `newname`**: Change name of `clan` to `newname`.
-                **clan playerlist**: Check list of players in clan.
-                **clan addplayer `player` `clan`**: Add `player` to `clan`.
-                **clan removeplayer `player` `clan`**: Remove `player` from `clan`.
-                **clan join `player` `clan`**: Join `clan` under `player`.
-            """, inline=False)
-        embed.add_field(name="__Player__",
-                        value="""
-                **player delete `player`**: Delete `player`.
-                **player check `player`**: Check info regarding `player`.
-            """, inline=False)
-        embed.add_field(name="__CB-Related__",
-                        value="""
-                **hit `comp` `player_name`**: Register a hit under `player_name` with `comp`.
-                **pilothit `comp` `piloted_player_name`**: Register a piloted hit under `piloted_player_name` with `comp`.
-                **kill `comp` `player_name` `ovf_time`**: Register a killed boss hit with `ovf_time`.
-                **pilotkill `comp` `piloted_player_name` `ovf_time`**: Register a killed boss hit under piloted player's account with `ovf_time`.
-            """, inline=False)
-        embed.add_field(name="__AVOID__",
-                        value="""
-                There are other commands registered under me, but if they are not found on this list, please **AVOID** using them for now.
-            """, inline=False)
+                    **help**: Shows list of commands.
+                    **invite**: Bot invite link *(WIP)*.
+                """)
+        elif type == "Server":
+            embed = discord.Embed(title="Marin Bot Commands - Server", color=0x3083e3,
+                                description="""
+                    Hi fellow **Cosplayer**! I'm a CB bot, designed to make your CB life easier!
+                """)
+            embed.add_field(name="__Server__",
+                            value="""
+                    **server setup**: Register server in bot. **MUST** run or else bot will not operate.
+                    **server addadminrole `role_id`**: Add role *(role ID)* as **admin role** in bot.
+                    **server removeadminrole `role_id`**: Remove role *(role ID)* from **admin role** in bot.
+                    **server addleadrole `role_id`**: Add role *(role ID)* as **lead role** in bot.
+                    **server removeleadrole `role_id`**: Remove role *(role ID)* from **lead role** in bot.
+                """, inline=False)
+        elif type == "Create":
+            embed = discord.Embed(title="Marin Bot Commands - Create", color=0x3083e3,
+                                description="""
+                    Hi fellow **Cosplayer**! I'm a CB bot, designed to make your CB life easier!
+                """)
+            embed.add_field(name="__Create__",
+                            value="""
+                    **create clan `clan`**: Create clan called `clan`.
+                    **create player `player`**: Create player called `player`.
+                    **create cb `cb_name` `start_date`**: Create CB for all clans for `cb_name` starting on `start_date`.
+                """, inline=False)
+        elif type == "Clan":
+            embed = discord.Embed(title="Marin Bot Commands - Clan", color=0x3083e3,
+                                description="""
+                    Hi fellow **Cosplayer**! I'm a CB bot, designed to make your CB life easier!
+                """)
+            embed.add_field(name="__Clan__",
+                            value="""
+                    **clan list**:  Get list of clans.
+                    **clan updatename `clan` `newname`**: Change name of `clan` to `newname`.
+                    **clan playerlist**: Check list of players in clan.
+                    **clan addplayer `player` `clan`**: Add `player` to `clan`.
+                    **clan removeplayer `player` `clan`**: Remove `player` from `clan`.
+                    **clan join `player` `clan`**: Join `clan` under `player`.
+                """, inline=False)
+        elif type == "Player":
+            embed = discord.Embed(title="Marin Bot Commands - Player", color=0x3083e3,
+                                description="""
+                    Hi fellow **Cosplayer**! I'm a CB bot, designed to make your CB life easier!
+                """)
+            embed.add_field(name="__Player__",
+                            value="""
+                    **player delete `player`**: Delete `player`.
+                    **player check `player`**: Check info regarding `player`.
+                """, inline=False)
+        elif type == "CB":
+            embed = discord.Embed(title="Marin Bot Commands - CB", color=0x3083e3,
+                                description="""
+                    Hi fellow **Cosplayer**! I'm a CB bot, designed to make your CB life easier!
+                """)
+            embed.add_field(name="__CB-Related__",
+                            value="""
+                    **hit `comp` `player_name`**: Register a hit under `player_name` with `comp`.
+                    **pilothit `comp` `piloted_player_name`**: Register a piloted hit under `piloted_player_name` with `comp`.
+                    **kill `comp` `player_name` `ovf_time`**: Register a killed boss hit with `ovf_time`.
+                    **pilotkill `comp` `piloted_player_name` `ovf_time`**: Register a killed boss hit under piloted player's account with `ovf_time`.
+                    **ovfhit `player_name`**: Removes ovf from `player_name`.
+                    **pilotovfhit `piloted_player_name`**: Removes ovf from `piloted_player_name`.
+                    **ovfkill `player_name`**: Kill boss with ovf and remove ovf from `player_name`.
+                    **ovfkill `piloted_player_name`**: Kill boss with ovf and remove ovf from `piloted_player_name`.
+                    **check `cb_day` `player_name`**: Check status of clan on `cb_day`.
+                    **selfcheck `cb_day` `player_name`**: Check status of `player_name`.
+                    **getoverflows `player_name`**: Get all available overflows in clan.
+                    **bossavailability**: Gets all available bookings for boss in lap.
+                    **bookboss `comp` `lap` `boss_num` `player_name`**: Book a hit on desired boss.
+                    **bookbossovf `comp` `lap` `boss_num` `player_name`**: Book an ovf hit on desired boss.
+                    **recordreset `player_name`**: Set reset as used.
+                    **gethitters `cb_day` `player_name`**: Get players that still have hits left.
+                """, inline=False)
+        elif type == "Admin":
+            embed = discord.Embed(title="Marin Bot Commands - Admin", color=0x3083e3,
+                                description="""
+                    Hi fellow **Cosplayer**! I'm a CB bot, designed to make your CB life easier!
+                """)
+            embed.add_field(name="__Server__",
+                            value="""
+                    **server setup**: Register server in bot. **MUST** run or else bot will not operate.
+                    **server addadminrole `role_id`**: Add role *(role ID)* as **admin role** in bot.
+                    **server removeadminrole `role_id`**: Remove role *(role ID)* from **admin role** in bot.
+                    **server addleadrole `role_id`**: Add role *(role ID)* as **lead role** in bot.
+                    **server removeleadrole `role_id`**: Remove role *(role ID)* from **lead role** in bot.
+                """, inline=False)
+            embed.add_field(name="__Create__",
+                            value="""
+                    **create clan `clan`**: Create clan called `clan`.
+                    **create cb `cb_name` `start_date`**: Create CB for all clans for `cb_name` starting on `start_date`.
+                """, inline=False)
+            embed.add_field(name="__Clan__",
+                            value="""
+                    **clan updatename `clan` `newname`**: Change name of `clan` to `newname`.
+                    **clan addplayer `player` `clan`**: Add `player` to `clan`.
+                    **clan removeplayer `player` `clan`**: Remove `player` from `clan`.
+                """, inline=False)
+        elif type == "Lead":
+            embed = discord.Embed(title="Marin Bot Commands - Lead", color=0x3083e3,
+                                description="""
+                    Hi fellow **Cosplayer**! I'm a CB bot, designed to make your CB life easier!
+                """)
+            embed.add_field(name="__Server__",
+                            value="""
+                    **server setup**: Register server in bot. **MUST** run or else bot will not operate.
+                    **server addadminrole `role_id`**: Add role *(role ID)* as **admin role** in bot.
+                    **server removeadminrole `role_id`**: Remove role *(role ID)* from **admin role** in bot.
+                    **server addleadrole `role_id`**: Add role *(role ID)* as **lead role** in bot.
+                    **server removeleadrole `role_id`**: Remove role *(role ID)* from **lead role** in bot.
+                """, inline=False)
+            embed.add_field(name="__Create__",
+                            value="""
+                    **create clan `clan`**: Create clan called `clan`.
+                    **create cb `cb_name` `start_date`**: Create CB for all clans for `cb_name` starting on `start_date`.
+                """, inline=False)
+            embed.add_field(name="__Clan__",
+                            value="""
+                    **clan updatename `clan` `newname`**: Change name of `clan` to `newname`.
+                    **clan addplayer `player` `clan`**: Add `player` to `clan`.
+                    **clan removeplayer `player` `clan`**: Remove `player` from `clan`.
+                """, inline=False)
+            embed.add_field(name="__AVOID__",
+                            value="""
+                    There are other commands registered under me, but if they are not found on this list, please **AVOID** using them for now.
+                """, inline=False)
+        else: 
+            embed = discord.Embed(title="Error", color=0x3083e3,
+                                description="""
+                    Invalid type. Please re-type **/help `list`** and look at description for options.
+                """)
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
     ### LEAD ONLY Commands ###
