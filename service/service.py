@@ -1031,8 +1031,8 @@ class Service:
         if not pcdi_to_be_updated:
             raise ObjectDoesntExistsInDBError(f'pcdi id {pcdi.pcbdi_id}')
 
-        if not (pcdi_to_be_updated.hits and pcdi_to_be_updated.cb_day):
-            raise ParameterIsNullError("Pcdi hits, reset and cb_day cant be empty")
+        if not pcdi_to_be_updated.cb_day:
+            raise ParameterIsNullError("Reset and cb_day cant be empty")
 
         async with aiosqlite.connect(self.db) as conn:
             cur = await conn.cursor()
