@@ -92,9 +92,11 @@ class CreateGroup(app_commands.Group):
                         for clan in clans:
                             exists = await self.service.exists_cb_in_date_by_clan_id(start_date, clan.clan_id)
                             if exists:
-                                error_message = f'Cant create clan battle because there is clan battle at this date: ' \
-                                                f'{exists}'
-                                await interaction.response.send_message(error_message)
+                                embed = discord.Embed(title="Error", color=0x3083e3,
+                                    description=f"Cant create clan battle because there is clan battle at this date: {exists}")
+                                # error_message = f'Cant create clan battle because there is clan battle at this date: ' \
+                                #                 f'{exists}'
+                                return await interaction.response.send_message(embed=embed, ephemeral=True)
                             cb = await self.service.create_clan_battle(clan.clan_id, cb_name, start_date)
                             cb.active = True
                             cb = await self.service.update_clan_batte(cb)
@@ -108,34 +110,12 @@ class CreateGroup(app_commands.Group):
                             boss1 = await self.service.get_boss_by_boss_number(1, cb.cb_id)
                             boss1.active = True
                             await self.service.update_boss(boss1)
-
-                            await interaction.response.send_message(f"Created clan battle for all clans on "
-                                                                    f"`{start_date}`")
-                        # clan = await self.service.get_clan_by_guild(interaction.guild_id)
-                        # exists = await self.service.exists_cb_in_date_by_clan_id(start_date, clan.clan_id)
-                        # if exists:
-                        #     error_message = f'Cant create clan battle because there is clan battle at this date: {exists}'
-                        #     await interaction.response.send_message(error_message)
-                        # cb = await self.service.create_clan_battle(clan.clan_id, cb_name, start_date)
-                        # clan_players = await self.service.get_players_from_clan(clan.clan_id)
-
-                        # for clan_player in clan_players:
-                        #     for _ in range(5):
-                        #         await self.service.create_player_cb_day_info(cb.cb_id, clan_player.player_id)
-                        # for boss_number in range(5):
-                        #     await self.service.create_boss(f'A{boss_number + 1}', boss_number + 1, 1, cb.cb_id)
-                        # boss1 = await self.service.get_boss_by_boss_number(1, cb.cb_id)
-                        # boss1.active = True
-                        # await self.service.update_boss(boss1)
-
-                        # await interaction.response.send_message(f"Created clan battle."
-                        #                                         f"\nStart: {cb.start_date}, End: {cb.end_date} "
-                        #                                         f"Created bosses and player tables")
-                        break
-                else:
-                    continue
-                # This will be executed only if the inner loop was terminated by break
-                break
+                            embed = discord.Embed(title="Create clan battle success!", color=0x3083e3,
+                                description=f"Created clan battle for all clans on `{start_date}`")
+                            return await interaction.response.send_message(embed=embed, ephemeral=False)
+            embed = discord.Embed(title="Error", color=0x3083e3,
+                                description=f"You don't have permission to use this command!")
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
         except (ObjectExistsInDBError, ObjectDoesntExistsInDBError, PlayerCBDayInfoLimitOfEntriesForPlayerAndCBReached
                 , ObjectDoesntExistsInDBError, ValueError) as e:
             await interaction.response.send_message(e)

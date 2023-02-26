@@ -49,9 +49,9 @@ def run_discord_bot():
 
     @client.tree.command(name="hello")
     async def hello(interaction: discord.Interaction):
-        await interaction.response.send_message(
-            f"Hi fellow cosplayer {interaction.user.mention}! Your Discord ID is {interaction.user.id}. I'm Marin",
-            ephemeral=False)
+        embed = discord.Embed(title="Hello!", color=0x3083e3,
+                              description=f"Hi fellow cosplayer {interaction.user.mention}! I'm Marin, and your Discord ID is {interaction.user.id}.")
+        return await interaction.response.send_message(embed=embed, ephemeral=False)
 
     @client.tree.command(name="help")
     @app_commands.describe(type='Basic | Server | Create | Clan | Player | CB 1 | CB 2 | Admin | Lead')
@@ -217,55 +217,6 @@ def run_discord_bot():
             await interaction.response.send_message(f"Starting clan battle on {date}")
         except:
             return ""
-
-    ### GENERAL COMMANDS ###
-
-    # @client.tree.command(name="bossavailability", description="Displays hit bookings on all bosses")
-    # async def bossavailability(interaction: discord.Interaction):
-    #     """ Check info regarding boss availability """
-    #     try:
-    #         guild = await service.get_guild_by_id(interaction.guild.id)
-    #         if not guild:
-    #             raise ObjectDoesntExistsInDBError("Server doesn't exist! Please run **/server setup**")
-    #         await interaction.response.send_message(
-    #             f"__**Overflow Count: \_\_\_**__"
-    #             f"\nBoss 1: \_\_ hits booked"
-    #             f"\nBoss 2: \_\_ hits booked"
-    #             f"\nBoss 3: \_\_ hits booked"
-    #             f"\nBoss 4: \_\_ hits booked"
-    #             f"\nBoss 5: \_\_ hits booked")
-    #     except:
-    #         return ""
-
-    # @client.tree.command(name="ovf", description="Overflows currently in clan")
-    # async def ovf(interaction: discord.Interaction):
-    #     """ Check info regarding overflows existing in clan """
-    #     try:
-    #         guild = await service.get_guild_by_id(interaction.guild.id)
-    #         if not guild:
-    #             raise ObjectDoesntExistsInDBError("Server doesn't exist! Please run **/server setup**")
-    #         await interaction.response.send_message(
-    #             f"__**Overflow Count:**__ \_\_\_"
-    #             f"\nPlayer: \_\_\_\_"
-    #             f"\nBoss: \_\_\_"
-    #             f"\nTime: \_\_:\_\_"
-    #             f"\nEstimated Damage: \_\_\_\_")
-    #     except:
-    #         return ""
-
-    # @client.tree.command(name="bookhit", description="Book a hit on this boss")
-    # @app_commands.describe(boss="Boss", expecteddamage="Expected damage")
-    # async def bookhit(interaction: discord.Interaction, boss: str, expected_damage: str):
-    #     """ Book a hit on boss """
-    #     try:
-    #         guild = await service.get_guild_by_id(interaction.guild.id)
-    #         if not guild:
-    #             raise ObjectDoesntExistsInDBError("Server doesn't exist! Please run **/server setup**")
-    #         await interaction.response.send_message(
-    #             f"Booked hit on boss: {boss}"
-    #             f"\nWith expected damage: {expected_damage}")
-    #     except ObjectDoesntExistsInDBError as e:
-    #         await interaction.response.send_message(e)
 
     @client.tree.command(name="hit", description="Register hit")
     @app_commands.describe(comp="Ex. A32, D302SA", player_name='Name of your account')
