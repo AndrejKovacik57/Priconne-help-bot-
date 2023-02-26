@@ -1330,6 +1330,34 @@ class Service:
             await conn.commit()
 
         return bb
+    
+    async def remove_boss_booking(self, lap: int, curr_lap: int, overflow: bool, comp_name: str,
+                                  boss_id: int, player_id: int, cb_id: int, ovf_time='') -> BossBooking:
+        """ Remove boss booking from table. """
+        if not (lap and comp_name and boss_id and player_id and cb_id):
+            raise ParameterIsNullError("Cb lap and comp_name boss_id cant player_id be empty")
+
+        active_boss = await self.get_active_boss_by_cb_id(cb_id)
+        boss = await self.get_boss_by_id(boss_id)
+        if curr_lap == lap and active_boss.boss_number > boss.boss_number or curr_lap > lap:
+            raise CantBookDeadBossError('You cant book dead boss')
+
+        async with aiosqlite.connect(self.db) as conn:
+            cur = await conn.cursor()
+            if overflow and not ovf_time:
+                raise ParameterIsNullError("Hit is marked as ovf but ovf_time is not set")
+
+            elif overflow and ovf_time:
+                bb = BossBooking(cur.lastrowid, lap, comp_name, boss_id, player_id, overflow=overflow,
+                                 ovf_time=ovf_time)
+                await cur.execute(""" DELETE FROM BossBooking WHERE lap = ? and comp_name = ? and boss_id = ? and player_id = ? """, (lap, comp_name, boss_id, player_id))
+            else:
+                bb = BossBooking(cur.lastrowid, lap, comp_name, boss_id, player_id)
+                await cur.execute(""" DELETE FROM BossBooking WHERE lap = ? and comp_name = ? and boss_id = ? and player_id = ? """, (lap, comp_name, boss_id, player_id))
+
+            await conn.commit()
+
+        return bb
 
     async def get_boss_booking_by_id(self, bb_id: int) -> BossBooking or None:
         """ Gets boss booking by Id """

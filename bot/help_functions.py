@@ -247,3 +247,37 @@ async def book_boss_help(service, interaction, ovf_time, lap, boss_num, comp_nam
     except (ObjectDoesntExistsInDBError, CantBookDeadBossError, NoActiveCBError, ParameterIsNullError,
             ClanBattleCantHaveMoreThenFiveDaysError, ValueError) as e:
         await interaction.response.send_message(e)
+
+async def remove_book_boss_help(service, interaction, ovf_time, lap, boss_num, comp_name, player_name):
+    try:
+        lap_int = int(lap)
+        boss_num_int = int(boss_num)
+        players = await service.get_player_by_discord_id(interaction.user.id)
+        player = multiple_players_check(player_name, players)
+        clan_player = await service.get_clan_player(player.player_id)
+        clan = clan_player[1]
+        cb = await service.get_clan_battle_active_by_clan_id(clan.clan_id)
+        day_of_cb = get_cb_day(cb)
+
+        if day_of_cb:
+            boss = await service.get_boss_by_boss_number(boss_num_int, cb.cb_id)
+            boss_char = boss_char_by_lap(lap_int)
+            boss_name = f'{boss_char}{boss.name[1:]}'
+            player = multiple_players_check(player_name, players)
+            if ovf_time:
+                booking = await service.remove_boss_booking(lap_int, cb.lap, True, comp_name, boss.boss_id,
+                                                            player.player_id, cb.cb_id, ovf_time=ovf_time)
+                embed=discord.Embed(title="Success!", color=0x3083e3,
+                                    description=f'You removed **{booking.comp_name}** with ovf time: **{ovf_time}** for boss: **{boss_name}** on **lap {lap}**')
+                return await interaction.response.send_message(embed=embed, ephemeral=False)
+            else:
+                booking = await service.remove_boss_booking(lap_int, cb.lap, False, comp_name, boss.boss_id,
+                                                            player.player_id, cb.cb_id)
+                embed=discord.Embed(title="Success!", color=0x3083e3,
+                                    description=f'You removed **{booking.comp_name}** for boss: **{boss_name}** on **lap {lap}**')
+                return await interaction.response.send_message(embed=embed, ephemeral=False)
+        else:
+            await interaction.response.send_message(f"Today is not cb day")
+    except (ObjectDoesntExistsInDBError, CantBookDeadBossError, NoActiveCBError, ParameterIsNullError,
+            ClanBattleCantHaveMoreThenFiveDaysError, ValueError) as e:
+        await interaction.response.send_message(e)

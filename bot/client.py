@@ -9,7 +9,7 @@ import json
 import os
 from service.service import Service
 from .help_functions import get_cb_day, hit_kill, multiple_players_check, update_lap_and_tier, scrape_clan_rankings, \
-    boss_char_by_lap, book_boss_help
+    boss_char_by_lap, book_boss_help, remove_book_boss_help
 from typing import Optional
 from table2ascii import table2ascii as t2a, PresetStyle
 
@@ -584,6 +584,20 @@ def run_discord_bot():
             embed = discord.Embed(title=f"Error", color=0x3083e3,
                                   description=e)
             return await interaction.response.send_message(embed=embed, ephemeral=True)
+        
+    @client.tree.command(name="removebookboss", description="Remove booking from boss")
+    @app_commands.describe(comp='Name of team composition', lap="Desired lap",
+                           boss_num='Boss number', player_name='Name of your account')
+    async def remove_book_boss(interaction: discord.Interaction, comp: str, lap: str, boss_num: str,
+                        player_name: Optional[str] = None):
+        try:
+            await service.get_guild_by_id(interaction.guild.id)
+            await remove_book_boss_help(service, interaction, '', lap, boss_num, comp, player_name)
+
+        except ObjectDoesntExistsInDBError as e:
+            embed = discord.Embed(title=f"Error", color=0x3083e3,
+                                  description=e)
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @client.tree.command(name="bookbossovf", description="Creates booking for desired boss for ovf hit")
     @app_commands.describe(comp_name='Name of team composition', ovf_time='Overflow time', lap="Desired lap",
@@ -594,6 +608,21 @@ def run_discord_bot():
             await service.get_guild_by_id(interaction.guild.id)
 
             await book_boss_help(service, interaction, ovf_time, lap, boss_num, comp_name, player_name)
+
+        except ObjectDoesntExistsInDBError as e:
+            embed = discord.Embed(title=f"Error", color=0x3083e3,
+                                  description=e)
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
+        
+    @client.tree.command(name="removebookbossovf", description="Removes booking from boss for ovf hit")
+    @app_commands.describe(comp='Name of team composition', ovf_time='Overflow time', lap="Desired lap",
+                           boss_num='Boss number', player_name='Name of your account')
+    async def remove_book_boss_ovf(interaction: discord.Interaction, comp: str, ovf_time: str, lap: str, boss_num: str,
+                            player_name: Optional[str] = None):
+        try:
+            await service.get_guild_by_id(interaction.guild.id)
+
+            await remove_book_boss_help(service, interaction, ovf_time, lap, boss_num, comp, player_name)
 
         except ObjectDoesntExistsInDBError as e:
             embed = discord.Embed(title=f"Error", color=0x3083e3,
