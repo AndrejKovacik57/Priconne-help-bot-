@@ -11,6 +11,7 @@ from service.service import Service
 from .help_functions import get_cb_day, hit_kill, multiple_players_check, update_lap_and_tier, scrape_clan_rankings, \
     boss_char_by_lap, book_boss_help
 from typing import Optional
+from table2ascii import table2ascii as t2a, PresetStyle
 
 # Open config.json file
 # If doesn't exist, create with empty TOKEN field
@@ -290,11 +291,17 @@ def run_discord_bot():
                     pcdi.ovf_time = ''
                     pcdi.ovf_comp = ''
                     await service.update_pcdi(pcdi)
-                    await interaction.response.send_message(f"You have used your ovf")
+                    embed = discord.Embed(title="Success!", color=0x3083e3,
+                                          description="You have used your ovf.")
+                    return await interaction.response.send_message(embed=embed, ephemeral=False)
                 else:
-                    await interaction.response.send_message(f"You dont have ovf")
+                    embed = discord.Embed(title="No ovf.", color=0x3083e3,
+                                          description=f"You dont have ovf.")
+                    return await interaction.response.send_message(embed=embed, ephemeral=False)
             else:
-                await interaction.response.send_message(f"Today is not cb day")
+                embed = discord.Embed(title="Error.", color=0x3083e3,
+                                          description=f"Today is not cb day.")
+                return await interaction.response.send_message(embed=embed, ephemeral=False)
         except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDaysError, ObjectDoesntExistsInDBError, NoActiveCBError) as e:
             embed = discord.Embed(title=f"Error", color=0x3083e3,
                                   description=e)
@@ -458,15 +465,17 @@ def run_discord_bot():
 
             if 5 >= cb_day >= 1:
                 pcdi = await service.get_pcdi_by_player_id_and_cb_id_and_day(player.player_id, cb.cb_id, cb_day)
-                has_ovf = 'yes' if pcdi.overflow else 'no'
+                has_ovf = 'Yes' if pcdi.overflow else 'No'
                 ovf_time = f'Ovf time: {pcdi.ovf_time}\n' if pcdi.overflow else ''
                 ovf_comp = f'Ovf comp: {pcdi.ovf_comp}\n' if pcdi.overflow else ''
-                reset_string = 'not used' if pcdi.reset else 'used'
-                await interaction.response.send_message(f"Hits left: {pcdi.hits}/3\n"
-                                                        f"Reset: {reset_string}\n"
-                                                        f"Ovf: {has_ovf}\n"
-                                                        f"{ovf_time}"
-                                                        f"{ovf_comp}")
+                reset_string = 'AVAILABLE' if pcdi.reset else 'USED'
+                embed = discord.Embed(title=f"{player.name}", color=0x3083e3,
+                                      description=f"Hits left: {pcdi.hits}/3\n"
+                                                  f"Reset: {reset_string}\n"
+                                                  f"Ovf: {has_ovf}\n"
+                                                  f"{ovf_time}"
+                                                  f"{ovf_comp}")
+                await interaction.response.send_message(embed=embed, ephemeral=False)
             else:
                 await interaction.response.send_message(f"Not a cb day")
         except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDaysError, ObjectDoesntExistsInDBError,
@@ -490,16 +499,26 @@ def run_discord_bot():
             if cb_day:
                 pcdi_player_tup = await service.get_all_pcdi_ovf_by_cb_id(cb.cb_id, True, cb_day)
                 message_string = ''
+                table_header = ["Player", "Comp", "Time"]
+                temp = []
                 for item in pcdi_player_tup:
                     pcdi = item[0]
                     player = item[1]
                     message_string += f'Player: {player.name}, ovf comp is {pcdi.ovf_comp}, ovf time: {pcdi.ovf_time}\n'
+                    temp.append([player.name, pcdi.ovf_comp, pcdi.ovf_time])
                 if message_string:
-                    await interaction.response.send_message(message_string)
+                    print_me = t2a(
+                        header=table_header,
+                        body=temp,
+                        style=PresetStyle.thin_compact
+                    )
+                    await interaction.response.send_message(f"```{print_me}```")
                 else:
                     await interaction.response.send_message(f'There are no ovf in clan')
             else:
-                await interaction.response.send_message(f"Today is not cb day")
+                embed = discord.Embed(title=f"Error", color=0x3083e3,
+                                  description="Today is not CB day.")
+                await interaction.response.send_message(embed=embed, ephemeral=False)
         except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDaysError, ObjectDoesntExistsInDBError,
                 NoActiveCBError, ValueError) as e:
             embed = discord.Embed(title=f"Error", color=0x3083e3,
@@ -560,7 +579,9 @@ def run_discord_bot():
             await book_boss_help(service, interaction, '', lap, boss_num, comp_name, player_name)
 
         except ObjectDoesntExistsInDBError as e:
-            return await interaction.response.send_message(e)
+            embed = discord.Embed(title=f"Error", color=0x3083e3,
+                                  description=e)
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @client.tree.command(name="bookbossovf", description="Creates booking for desired boss for ovf hit")
     @app_commands.describe(comp_name='Name of team composition', ovf_time='Overflow time', lap="Desired lap",

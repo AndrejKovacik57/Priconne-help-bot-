@@ -1,3 +1,4 @@
+import discord
 from datetime import datetime, timezone
 import re
 from bs4 import BeautifulSoup
@@ -74,10 +75,13 @@ async def update_lap_and_tier(service, interaction, cb, pcdi):
         boss = await service.get_boss_by_boss_number(boss_number, cb.cb_id)
         boss.active = True
         boss = await service.update_boss(boss)
-
-    return await interaction.response.send_message(
-        f"You recorded your hit with ovf time {pcdi.ovf_time} and killed the {boss_killed_name}."
-        f"\nActive boss:{boss.name}")
+    embed=discord.Embed(title="Success!", color=0x3083e3,
+                        description=f"You recorded your hit with ovf time {pcdi.ovf_time} and killed the {boss_killed_name}"
+                                    f"\nActive Boss: {boss.name}")
+    return await interaction.response.send_message(embed=embed, ephemeral=False)
+    # return await interaction.response.send_message(
+    #     f"You recorded your hit with ovf time {pcdi.ovf_time} and killed the {boss_killed_name}."
+    #     f"\nActive boss:{boss.name}")
 
 
 def multiple_players_check(player_name, players):
@@ -115,8 +119,8 @@ async def hit_kill(service, interaction, tc_name, player_name, ovf_time='', pilo
             clan = clan_player[1]
             guild = await service.get_guild_by_id(clan.guild_id)
             if interaction.guild.id != guild.guild_id:
-                return await interaction.response.send_message(f"You cant pilot {player_name} because they are not in "
-                                                               f"this disocrd server")
+                return await interaction.response.send_message(f"You can't pilot {player_name} because they are not in "
+                                                               f"this discord server")
 
         cb = await service.get_clan_battle_active_by_clan_id(clan.clan_id)
         day_of_cb = get_cb_day(cb)
@@ -222,16 +226,22 @@ async def book_boss_help(service, interaction, ovf_time, lap, boss_num, comp_nam
             if ovf_time:
                 booking = await service.create_boss_booking(lap_int, cb.lap, True, comp_name, boss.boss_id,
                                                             player.player_id, cb.cb_id, ovf_time=ovf_time)
-                return await interaction.response.send_message(
-                    f'You booked comp: {booking.comp_name} with ovf time: {ovf_time}, for boss: {boss_name}'
-                    f' in lap: {lap}'
-                )
+                embed=discord.Embed(title="Success!", color=0x3083e3,
+                                    description=f'You booked **{booking.comp_name}** with ovf time: **{ovf_time}** for boss: **{boss_name}** on **lap {lap}**')
+                return await interaction.response.send_message(embed=embed, ephemeral=False)
+                # return await interaction.response.send_message(
+                #     f'You booked comp: {booking.comp_name} with ovf time: {ovf_time}, for boss: {boss_name}'
+                #     f' in lap: {lap}'
+                # )
             else:
                 booking = await service.create_boss_booking(lap_int, cb.lap, False, comp_name, boss.boss_id,
                                                             player.player_id, cb.cb_id)
-                return await interaction.response.send_message(
-                    f'You booked comp: {booking.comp_name}, for boss: {boss_name} in lap: {lap}'
-                )
+                embed=discord.Embed(title="Success!", color=0x3083e3,
+                                    description=f'You booked **{booking.comp_name}** for boss: **{boss_name}** on **lap {lap}**')
+                return await interaction.response.send_message(embed=embed, ephemeral=False)
+                # return await interaction.response.send_message(
+                #     f'You booked comp: {booking.comp_name}, for boss: {boss_name} in lap: {lap}'
+                # )
         else:
             await interaction.response.send_message(f"Today is not cb day")
     except (ObjectDoesntExistsInDBError, CantBookDeadBossError, NoActiveCBError, ParameterIsNullError,
