@@ -673,19 +673,24 @@ def run_discord_bot():
             if not cb_day:
                 cb_day = get_cb_day(cb)
             if not cb_day:
-                embed = discord.Embed(title=f"No CB", color=0xffff00,
+                embed = discord.Embed(title=f"No CB", color=0xff0000,
                                       description=f"Not a CB day")
                 return await interaction.response.send_message(embed=embed, ephemeral=True)
             if 5 >= cb_day >= 1:
-                message_string = f'Day: {cb_day}\n'
                 hitters = await service.get_pcdi_by_cb_id_and_hits(cb.cb_id, cb_day)
+                hitter_names = ''
+                hitter_hits = ''
                 for hitter in hitters:
-                    message_string += f'{hitter[0]}: {hitter[1]}/3\n'
+                    hitter_names += f"{hitter[0]}\n"
+                    hitter_hits += f"{hitter[1]/3}\n"
 
-                if message_string == f'Day: {cb_day}\n':
-                    message_string += 'Nobody has hits left'
-                embed = discord.Embed(title=f"Day {cb_day}", color=0xffff00,
-                                      description=f"{message_string}")
+                if len(hitters) == 0:
+                    embed = discord.Embed(title="All Done!", color=0xffff00,
+                                      description="No remaining hits")
+                    return await interaction.response.send_message(embed=embed, ephemeral=False)
+                embed = discord.Embed(title=f"Day {cb_day}", color=0xffff00)
+                embed.add_field(name="Name", value=hitter_names, inline=True)
+                embed.add_field(name="Hits", value=hitter_hits, inline=True)
                 return await interaction.response.send_message(embed=embed, ephemeral=False)
             else:
                 embed = discord.Embed(title=f"No CB", color=0xffff00,
