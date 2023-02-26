@@ -75,13 +75,10 @@ async def update_lap_and_tier(service, interaction, cb, pcdi):
         boss = await service.get_boss_by_boss_number(boss_number, cb.cb_id)
         boss.active = True
         boss = await service.update_boss(boss)
-    embed=discord.Embed(title="Success!", color=0x3083e3,
+    embed=discord.Embed(title="Success!", color=0xffff00,
                         description=f"You recorded your hit with ovf time {pcdi.ovf_time} and killed the {boss_killed_name}"
                                     f"\nActive Boss: {boss.name}")
     return await interaction.response.send_message(embed=embed, ephemeral=False)
-    # return await interaction.response.send_message(
-    #     f"You recorded your hit with ovf time {pcdi.ovf_time} and killed the {boss_killed_name}."
-    #     f"\nActive boss:{boss.name}")
 
 
 def multiple_players_check(player_name, players):
@@ -119,8 +116,9 @@ async def hit_kill(service, interaction, tc_name, player_name, ovf_time='', pilo
             clan = clan_player[1]
             guild = await service.get_guild_by_id(clan.guild_id)
             if interaction.guild.id != guild.guild_id:
-                return await interaction.response.send_message(f"You can't pilot {player_name} because they are not in "
-                                                               f"this discord server")
+                embed = discord.Embed(title="Error", color=0xff0000,
+                                  description=f"You can't pilot {player_name} because they are not in this discord server!")
+                return await interaction.response.send_message(embed=embed, ephemeral=True)
 
         cb = await service.get_clan_battle_active_by_clan_id(clan.clan_id)
         day_of_cb = get_cb_day(cb)
@@ -128,10 +126,13 @@ async def hit_kill(service, interaction, tc_name, player_name, ovf_time='', pilo
         if day_of_cb:
             pcdi = await service.get_pcdi_by_player_id_and_cb_id_and_day(player.player_id, cb.cb_id, day_of_cb)
             if pcdi.overflow:
-                return await interaction.response.send_message(f"You have overflow active, you cant use hit "
-                                                               f"command")
+                embed = discord.Embed(title="Error", color=0xff0000,
+                                          description=f"You have overflow active, you can't use hit command")
+                return await interaction.response.send_message(embed=embed, ephemeral=True)
             if pcdi.hits == 0:
-                return await interaction.response.send_message(f"You dont have any hits left")
+                embed = discord.Embed(title="Error", color=0xff0000,
+                                          description=f"You dont have any hits left")
+                return await interaction.response.send_message(embed=embed, ephemeral=True)
 
             else:
                 tc = await service.get_team_composition_by_comp_name_and_pcdi_id(tc_name, pcdi.pcbdi_id)
@@ -139,8 +140,9 @@ async def hit_kill(service, interaction, tc_name, player_name, ovf_time='', pilo
                     tc = await service.create_team_composition(tc_name, pcdi.pcbdi_id)
 
                 if tc.used and not ovf_time:
-                    return await interaction.response.send_message(f"You already used team composition: "
-                                                                   f"{tc.name}")
+                    embed = discord.Embed(title="Error", color=0xff0000,
+                                          description=f"You already used {tc.name}")
+                    return await interaction.response.send_message(embed=embed, ephemeral=True)
 
                 pcdi.hits -= 1
                 tc.used = True
@@ -156,11 +158,17 @@ async def hit_kill(service, interaction, tc_name, player_name, ovf_time='', pilo
                     return await update_lap_and_tier(service, interaction, cb, pcdi)
                 else:
                     await service.update_pcdi(pcdi)
-                    return await interaction.response.send_message(f"You recorded your hit with: {tc.name}")
+                    embed = discord.Embed(title="Success!", color=0xffff00,
+                                          description=f"Logged hit **{tc.name}**")
+                    return await interaction.response.send_message(embed=embed, ephemeral=False)
         else:
-            await interaction.response.send_message(f"Today is not cb day")
+            embed = discord.Embed(title="Error", color=0xff0000,
+                                          description="Today is not cb day")
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
     except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDaysError, ObjectDoesntExistsInDBError) as e:
-        return await interaction.response.send_message(e)
+        embed = discord.Embed(title="Error", color=0xff0000,
+                                          description=e)
+        return await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
 async def get_page_html(link):
@@ -226,27 +234,24 @@ async def book_boss_help(service, interaction, ovf_time, lap, boss_num, comp_nam
             if ovf_time:
                 booking = await service.create_boss_booking(lap_int, cb.lap, True, comp_name, boss.boss_id,
                                                             player.player_id, cb.cb_id, ovf_time=ovf_time)
-                embed=discord.Embed(title="Success!", color=0x3083e3,
+                embed=discord.Embed(title="OVF Book Success!", color=0xffff00,
                                     description=f'You booked **{booking.comp_name}** with ovf time: **{ovf_time}** for boss: **{boss_name}** on **lap {lap}**')
                 return await interaction.response.send_message(embed=embed, ephemeral=False)
-                # return await interaction.response.send_message(
-                #     f'You booked comp: {booking.comp_name} with ovf time: {ovf_time}, for boss: {boss_name}'
-                #     f' in lap: {lap}'
-                # )
             else:
                 booking = await service.create_boss_booking(lap_int, cb.lap, False, comp_name, boss.boss_id,
                                                             player.player_id, cb.cb_id)
-                embed=discord.Embed(title="Success!", color=0x3083e3,
+                embed=discord.Embed(title="Book Success!", color=0xffff00,
                                     description=f'You booked **{booking.comp_name}** for boss: **{boss_name}** on **lap {lap}**')
                 return await interaction.response.send_message(embed=embed, ephemeral=False)
-                # return await interaction.response.send_message(
-                #     f'You booked comp: {booking.comp_name}, for boss: {boss_name} in lap: {lap}'
-                # )
         else:
-            await interaction.response.send_message(f"Today is not cb day")
+            embed = discord.Embed(title="Error", color=0xff0000,
+                                  description="Today is not cb day")
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
     except (ObjectDoesntExistsInDBError, CantBookDeadBossError, NoActiveCBError, ParameterIsNullError,
             ClanBattleCantHaveMoreThenFiveDaysError, ValueError) as e:
-        await interaction.response.send_message(e)
+        embed = discord.Embed(title="Error", color=0xff0000,
+                                          description=e)
+        return await interaction.response.send_message(embed=embed, ephemeral=True)
 
 async def remove_book_boss_help(service, interaction, ovf_time, lap, boss_num, comp_name, player_name):
     try:
@@ -267,17 +272,21 @@ async def remove_book_boss_help(service, interaction, ovf_time, lap, boss_num, c
             if ovf_time:
                 booking = await service.remove_boss_booking(lap_int, cb.lap, True, comp_name, boss.boss_id,
                                                             player.player_id, cb.cb_id, ovf_time=ovf_time)
-                embed=discord.Embed(title="Success!", color=0x3083e3,
+                embed=discord.Embed(title="Success!", color=0xffff00,
                                     description=f'You removed **{booking.comp_name}** with ovf time: **{ovf_time}** for boss: **{boss_name}** on **lap {lap}**')
                 return await interaction.response.send_message(embed=embed, ephemeral=False)
             else:
                 booking = await service.remove_boss_booking(lap_int, cb.lap, False, comp_name, boss.boss_id,
                                                             player.player_id, cb.cb_id)
-                embed=discord.Embed(title="Success!", color=0x3083e3,
+                embed=discord.Embed(title="Success!", color=0xffff00,
                                     description=f'You removed **{booking.comp_name}** for boss: **{boss_name}** on **lap {lap}**')
                 return await interaction.response.send_message(embed=embed, ephemeral=False)
         else:
-            await interaction.response.send_message(f"Today is not cb day")
+            embed = discord.Embed(title="Error", color=0xff0000,
+                                  description="Today is not cb day")
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
     except (ObjectDoesntExistsInDBError, CantBookDeadBossError, NoActiveCBError, ParameterIsNullError,
             ClanBattleCantHaveMoreThenFiveDaysError, ValueError) as e:
-        await interaction.response.send_message(e)
+        embed = discord.Embed(title="Error", color=0xff0000,
+                                  description=e)
+        return await interaction.response.send_message(embed=embed, ephemeral=True)

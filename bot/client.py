@@ -50,7 +50,7 @@ def run_discord_bot():
 
     @client.tree.command(name="hello")
     async def hello(interaction: discord.Interaction):
-        embed = discord.Embed(title="Hello!", color=0x3083e3,
+        embed = discord.Embed(title="Hello!", color=0xffff00,
                               description=f"Hi fellow cosplayer {interaction.user.mention}! I'm Marin, and your Discord ID is {interaction.user.id}.")
         return await interaction.response.send_message(embed=embed, ephemeral=False)
 
@@ -60,7 +60,7 @@ def run_discord_bot():
                     # embed.set_author(name="Marin", icon_url=self.bot.user.avatar.url)
             # embed.set_author(name="Marin")
         if type == "Basic":
-            embed = discord.Embed(title="Marin Bot Commands - Basic", color=0x3083e3,
+            embed = discord.Embed(title="Marin Bot Commands - Basic", color=0xffff00,
                                 description="""
                     Hi fellow **Cosplayer**! I'm a CB bot, designed to make your CB life easier!
 
@@ -68,7 +68,7 @@ def run_discord_bot():
                     **invite**: Bot invite link *(WIP)*.
                 """)
         elif type == "Server":
-            embed = discord.Embed(title="Marin Bot Commands - Server", color=0x3083e3,
+            embed = discord.Embed(title="Marin Bot Commands - Server", color=0xffff00,
                                 description="""
                     Hi fellow **Cosplayer**! I'm a CB bot, designed to make your CB life easier!
                 """)
@@ -81,7 +81,7 @@ def run_discord_bot():
                     **server removeleadrole `role_id`**: Remove role *(role ID)* from **lead role** in bot.
                 """, inline=False)
         elif type == "Create":
-            embed = discord.Embed(title="Marin Bot Commands - Create", color=0x3083e3,
+            embed = discord.Embed(title="Marin Bot Commands - Create", color=0xffff00,
                                 description="""
                     Hi fellow **Cosplayer**! I'm a CB bot, designed to make your CB life easier!
                 """)
@@ -92,7 +92,7 @@ def run_discord_bot():
                     **create cb `cb_name` `start_date`**: Create CB for all clans for `cb_name` starting on `start_date`.
                 """, inline=False)
         elif type == "Clan":
-            embed = discord.Embed(title="Marin Bot Commands - Clan", color=0x3083e3,
+            embed = discord.Embed(title="Marin Bot Commands - Clan", color=0xffff00,
                                 description="""
                     Hi fellow **Cosplayer**! I'm a CB bot, designed to make your CB life easier!
                 """)
@@ -106,7 +106,7 @@ def run_discord_bot():
                     **clan join `player` `clan`**: Join `clan` under `player`.
                 """, inline=False)
         elif type == "Player":
-            embed = discord.Embed(title="Marin Bot Commands - Player", color=0x3083e3,
+            embed = discord.Embed(title="Marin Bot Commands - Player", color=0xffff00,
                                 description="""
                     Hi fellow **Cosplayer**! I'm a CB bot, designed to make your CB life easier!
                 """)
@@ -116,7 +116,7 @@ def run_discord_bot():
                     **player check `player`**: Check info regarding `player`.
                 """, inline=False)
         elif type == "CB 1":
-            embed = discord.Embed(title="Marin Bot Commands - CB", color=0x3083e3,
+            embed = discord.Embed(title="Marin Bot Commands - CB", color=0xffff00,
                                 description="""
                     Hi fellow **Cosplayer**! I'm a CB bot, designed to make your CB life easier!
                 """)
@@ -132,7 +132,7 @@ def run_discord_bot():
                     **pilotovfkill `piloted_player_name`**: Kill boss with ovf and remove ovf from `piloted_player_name`.
                 """, inline=False)
         elif type == "CB 2":
-            embed = discord.Embed(title="Marin Bot Commands - CB", color=0x3083e3,
+            embed = discord.Embed(title="Marin Bot Commands - CB", color=0xffff00,
                                 description="""
                     Hi fellow **Cosplayer**! I'm a CB bot, designed to make your CB life easier!
                 """)
@@ -148,7 +148,7 @@ def run_discord_bot():
                     **gethitters `cb_day` `player_name`**: Get players that still have hits left.
                 """, inline=False)
         elif type == "Admin":
-            embed = discord.Embed(title="Marin Bot Commands - Admin", color=0x3083e3,
+            embed = discord.Embed(title="Marin Bot Commands - Admin", color=0xffff00,
                                 description="""
                     Hi fellow **Cosplayer**! I'm a CB bot, designed to make your CB life easier!
                 """)
@@ -173,7 +173,7 @@ def run_discord_bot():
                     **clan removeplayer `player` `clan`**: Remove `player` from `clan`.
                 """, inline=False)
         elif type == "Lead":
-            embed = discord.Embed(title="Marin Bot Commands - Lead", color=0x3083e3,
+            embed = discord.Embed(title="Marin Bot Commands - Lead", color=0xffff00,
                                 description="""
                     Hi fellow **Cosplayer**! I'm a CB bot, designed to make your CB life easier!
                 """)
@@ -198,7 +198,7 @@ def run_discord_bot():
                     **clan removeplayer `player` `clan`**: Remove `player` from `clan`.
                 """, inline=False)
         else: 
-            embed = discord.Embed(title="Error", color=0x3083e3,
+            embed = discord.Embed(title="Error", color=0xff0000,
                                 description="""
                     Invalid type. Please re-type **/help `list`** and look at description for options.
                 """)
@@ -227,7 +227,7 @@ def run_discord_bot():
             await service.get_guild_by_id(interaction.guild.id)
             await hit_kill(service, interaction, comp, player_name)
         except (ObjectDoesntExistsInDBError, ValueError) as e:
-            embed = discord.Embed(title=f"Error", color=0x3083e3,
+            embed = discord.Embed(title="Error", color=0xff0000,
                                   description=e)
             return await interaction.response.send_message(embed=embed, ephemeral=True)
 
@@ -240,7 +240,7 @@ def run_discord_bot():
             await service.get_guild_by_id(interaction.guild.id)
             await hit_kill(service, interaction, comp, piloted_player_name, pilot=True)
         except (ObjectDoesntExistsInDBError, PlayerNotInClanError, ValueError) as e:
-            embed = discord.Embed(title=f"Error", color=0x3083e3,
+            embed = discord.Embed(title="Error", color=0xff0000,
                                   description=e)
             return await interaction.response.send_message(embed=embed, ephemeral=True)
 
@@ -252,7 +252,7 @@ def run_discord_bot():
             await service.get_guild_by_id(interaction.guild.id)
             await hit_kill(service, interaction, comp, player_name, ovf_time=ovf_time)
         except (ObjectDoesntExistsInDBError, ValueError) as e:
-            embed = discord.Embed(title=f"Error", color=0x3083e3,
+            embed = discord.Embed(title="Error", color=0xff0000,
                                   description=e)
             return await interaction.response.send_message(embed=embed, ephemeral=True)
 
@@ -265,7 +265,7 @@ def run_discord_bot():
             await service.get_guild_by_id(interaction.guild.id)
             await hit_kill(service, interaction, comp, piloted_player_name, ovf_time=ovf_time, pilot=True)
         except (ObjectDoesntExistsInDBError, PlayerNotInClanError, NoActiveCBError, ValueError) as e:
-            embed = discord.Embed(title=f"Error", color=0x3083e3,
+            embed = discord.Embed(title="Error", color=0xff0000,
                                   description=e)
             return await interaction.response.send_message(embed=embed, ephemeral=True)
 
@@ -291,19 +291,19 @@ def run_discord_bot():
                     pcdi.ovf_time = ''
                     pcdi.ovf_comp = ''
                     await service.update_pcdi(pcdi)
-                    embed = discord.Embed(title="Success!", color=0x3083e3,
+                    embed = discord.Embed(title="Success!", color=0xffff00,
                                           description="You have used your ovf.")
                     return await interaction.response.send_message(embed=embed, ephemeral=False)
                 else:
-                    embed = discord.Embed(title="No ovf.", color=0x3083e3,
+                    embed = discord.Embed(title="No ovf.", color=0xffff00,
                                           description=f"You dont have ovf.")
                     return await interaction.response.send_message(embed=embed, ephemeral=False)
             else:
-                embed = discord.Embed(title="Error.", color=0x3083e3,
+                embed = discord.Embed(title="Error.", color=0xff0000,
                                           description=f"Today is not cb day.")
                 return await interaction.response.send_message(embed=embed, ephemeral=False)
         except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDaysError, ObjectDoesntExistsInDBError, NoActiveCBError) as e:
-            embed = discord.Embed(title=f"Error", color=0x3083e3,
+            embed = discord.Embed(title="Error", color=0xff0000,
                                   description=e)
             return await interaction.response.send_message(embed=embed, ephemeral=True)
 
@@ -338,7 +338,7 @@ def run_discord_bot():
                 await interaction.response.send_message(f"Today is not cb day")
         except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDaysError, ObjectDoesntExistsInDBError,
                 ValueError, NoActiveCBError) as e:
-            embed = discord.Embed(title=f"Error", color=0x3083e3,
+            embed = discord.Embed(title="Error", color=0xff0000,
                                   description=e)
             return await interaction.response.send_message(embed=embed, ephemeral=True)
 
@@ -370,7 +370,7 @@ def run_discord_bot():
             else:
                 await interaction.response.send_message(f"Today is not cb day")
         except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDaysError, ObjectDoesntExistsInDBError) as e:
-            embed = discord.Embed(title=f"Error", color=0x3083e3,
+            embed = discord.Embed(title="Error", color=0xff0000,
                                   description=e)
             return await interaction.response.send_message(embed=embed, ephemeral=True)
 
@@ -407,7 +407,7 @@ def run_discord_bot():
                 await interaction.response.send_message(f"Today is not cb day")
         except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDaysError, ObjectDoesntExistsInDBError,
                 ValueError) as e:
-            embed = discord.Embed(title=f"Error", color=0x3083e3,
+            embed = discord.Embed(title="Error", color=0xff0000,
                                   description=e)
             return await interaction.response.send_message(embed=embed, ephemeral=True)
 
@@ -432,7 +432,7 @@ def run_discord_bot():
                 hits_left = await service.get_today_hits_left(cb_day, cb.cb_id)
                 ranking = await scrape_clan_rankings(clan.name)
                 boss = await service.get_active_boss_by_cb_id(cb.cb_id)
-                embed=discord.Embed(title=f"{clan.name}", color=0x3083e3,
+                embed=discord.Embed(title=f"{clan.name}", color=0xffff00,
                                     description=f"Hits Left: {hits_left}/90\n"
                                                 f"Lap: {cb.lap}\n"
                                                 f"Boss: {boss.name}\n"
@@ -442,7 +442,7 @@ def run_discord_bot():
                 await interaction.response.send_message(f"Not a cb day")
         except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDaysError, ObjectDoesntExistsInDBError,
                 NoActiveCBError, ValueError) as e:
-            embed = discord.Embed(title=f"Error", color=0x3083e3,
+            embed = discord.Embed(title="Error", color=0xff0000,
                                   description=e)
             return await interaction.response.send_message(embed=embed, ephemeral=True)
 
@@ -471,7 +471,7 @@ def run_discord_bot():
                 ovf_time = f'Ovf time: {pcdi.ovf_time}\n' if pcdi.overflow else ''
                 ovf_comp = f'Ovf comp: {pcdi.ovf_comp}\n' if pcdi.overflow else ''
                 reset_string = 'AVAILABLE' if pcdi.reset else 'USED'
-                embed = discord.Embed(title=f"{player.name}", color=0x3083e3,
+                embed = discord.Embed(title=f"{player.name}", color=0xffff00,
                                       description=f"Hits left: {pcdi.hits}/3\n"
                                                   f"Reset: {reset_string}\n"
                                                   f"Ovf: {has_ovf}\n"
@@ -482,7 +482,7 @@ def run_discord_bot():
                 await interaction.response.send_message(f"Not a cb day")
         except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDaysError, ObjectDoesntExistsInDBError,
                 ValueError) as e:
-            embed = discord.Embed(title=f"Error", color=0x3083e3,
+            embed = discord.Embed(title="Error", color=0xff0000,
                                   description=e)
             return await interaction.response.send_message(embed=embed, ephemeral=True)
 
@@ -518,12 +518,12 @@ def run_discord_bot():
                 else:
                     await interaction.response.send_message(f'There are no ovf in clan')
             else:
-                embed = discord.Embed(title=f"Error", color=0x3083e3,
+                embed = discord.Embed(title="Error", color=0xff0000,
                                   description="Today is not CB day.")
                 await interaction.response.send_message(embed=embed, ephemeral=False)
         except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDaysError, ObjectDoesntExistsInDBError,
                 NoActiveCBError, ValueError) as e:
-            embed = discord.Embed(title=f"Error", color=0x3083e3,
+            embed = discord.Embed(title="Error", color=0xff0000,
                                   description=e)
             return await interaction.response.send_message(embed=embed, ephemeral=True)
 
@@ -556,18 +556,24 @@ def run_discord_bot():
                     player = item[2]
                     boss_name = f'{boss_char}{boss.name[1:]}'
                     ovf_time = f'ovf time: {booking.ovf_time}\n' if booking.overflow else ''
-                    has_ovf = f'ovf: yes, {ovf_time}' if booking.overflow else 'ovf: no'
+                    has_ovf = f'ovf: Yes, {ovf_time}' if booking.overflow else 'ovf: No'
 
-                    message_string += f'Boss: {boss_name}, player: {player.name}, team composition: {booking.comp_name}, ' \
-                                      f'{has_ovf}\n'
+                    message_string += f'**{player.name}** - {booking.comp_name}, {has_ovf}\n'
                 if not message_string:
-                    message_string = f'For lap: {lap} and boss: {boss_num} doesnt exists any booking'
-                await interaction.response.send_message(message_string)
+                    embed=discord.Embed(title=f"L{lap}B{boss_num}", color=0xffff00,
+                                        description="No existing bookings")
+                    return await interaction.response.send_message(embed=embed, ephemeral=False)
+                    # message_string = f'For lap: {lap} and boss: {boss_num} doesnt exists any booking'
+                embed=discord.Embed(title=f"L{lap}B{boss_num}", color=0xffff00,
+                                        description=f"{message_string}")
+                return await interaction.response.send_message(embed=embed, ephemeral=False)
             else:
-                await interaction.response.send_message(f"Today is not cb day")
+                embed = discord.Embed(title="Error", color=0xff0000,
+                                  description=f"Today is not cb day")
+                return await interaction.response.send_message(embed=embed, ephemeral=True)
         except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDaysError, ObjectDoesntExistsInDBError,
                 NoActiveCBError, ValueError) as e:
-            embed = discord.Embed(title=f"Error", color=0x3083e3,
+            embed = discord.Embed(title="Error", color=0xff0000,
                                   description=e)
             return await interaction.response.send_message(embed=embed, ephemeral=True)
 
@@ -581,7 +587,7 @@ def run_discord_bot():
             await book_boss_help(service, interaction, '', lap, boss_num, comp_name, player_name)
 
         except ObjectDoesntExistsInDBError as e:
-            embed = discord.Embed(title=f"Error", color=0x3083e3,
+            embed = discord.Embed(title="Error", color=0xff0000,
                                   description=e)
             return await interaction.response.send_message(embed=embed, ephemeral=True)
         
@@ -595,7 +601,7 @@ def run_discord_bot():
             await remove_book_boss_help(service, interaction, '', lap, boss_num, comp, player_name)
 
         except ObjectDoesntExistsInDBError as e:
-            embed = discord.Embed(title=f"Error", color=0x3083e3,
+            embed = discord.Embed(title="Error", color=0xff0000,
                                   description=e)
             return await interaction.response.send_message(embed=embed, ephemeral=True)
 
@@ -610,7 +616,7 @@ def run_discord_bot():
             await book_boss_help(service, interaction, ovf_time, lap, boss_num, comp_name, player_name)
 
         except ObjectDoesntExistsInDBError as e:
-            embed = discord.Embed(title=f"Error", color=0x3083e3,
+            embed = discord.Embed(title="Error", color=0xff0000,
                                   description=e)
             return await interaction.response.send_message(embed=embed, ephemeral=True)
         
@@ -625,7 +631,7 @@ def run_discord_bot():
             await remove_book_boss_help(service, interaction, ovf_time, lap, boss_num, comp, player_name)
 
         except ObjectDoesntExistsInDBError as e:
-            embed = discord.Embed(title=f"Error", color=0x3083e3,
+            embed = discord.Embed(title="Error", color=0xff0000,
                                   description=e)
             return await interaction.response.send_message(embed=embed, ephemeral=True)
 
@@ -649,7 +655,7 @@ def run_discord_bot():
                 await interaction.response.send_message(f"Today is not cb day")
         except (ObjectDoesntExistsInDBError, ParameterIsNullError, NoActiveCBError, ObjectDoesntExistsInDBError,
                 ValueError) as e:
-            embed = discord.Embed(title=f"Error", color=0x3083e3,
+            embed = discord.Embed(title="Error", color=0xff0000,
                                   description=e)
             return await interaction.response.send_message(embed=embed, ephemeral=True)
 
@@ -667,7 +673,9 @@ def run_discord_bot():
             if not cb_day:
                 cb_day = get_cb_day(cb)
             if not cb_day:
-                await interaction.response.send_message('Not a cb day')
+                embed = discord.Embed(title=f"No CB", color=0xffff00,
+                                      description=f"Not a CB day")
+                return await interaction.response.send_message(embed=embed, ephemeral=True)
             if 5 >= cb_day >= 1:
                 message_string = f'Day: {cb_day}\n'
                 hitters = await service.get_pcdi_by_cb_id_and_hits(cb.cb_id, cb_day)
@@ -676,11 +684,15 @@ def run_discord_bot():
 
                 if message_string == f'Day: {cb_day}\n':
                     message_string += 'Nobody has hits left'
-                await interaction.response.send_message(message_string)
+                embed = discord.Embed(title=f"Day {cb_day}", color=0xffff00,
+                                      description=f"{message_string}")
+                return await interaction.response.send_message(embed=embed, ephemeral=False)
             else:
-                await interaction.response.send_message('Not a cb day')
+                embed = discord.Embed(title=f"No CB", color=0xffff00,
+                                      description=f"Not a CB day")
+                return await interaction.response.send_message(embed=embed, ephemeral=True)
         except (ObjectDoesntExistsInDBError, ValueError, NoActiveCBError) as e:
-            embed = discord.Embed(title=f"Error", color=0x3083e3,
+            embed = discord.Embed(title="Error", color=0xff0000,
                                   description=e)
             return await interaction.response.send_message(embed=embed, ephemeral=True)
 

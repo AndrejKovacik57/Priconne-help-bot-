@@ -30,15 +30,17 @@ class ServerGroup(app_commands.Group):
         try:
             guild_id = interaction.guild.id
             await self.service.add_server(guild_id)
-            embed = discord.Embed(title="Setup", color=0x3083e3, description="Sweet! Your server is set up!")
+            embed = discord.Embed(title="Setup Success!", color=0xffff00, description="Sweet! Your server is set up!")
             await interaction.response.send_message(embed=embed, ephemeral=False)
         except ObjectExistsInDBError as e:
-            await interaction.response.send_message(e)
+            embed = discord.Embed(title="Error", color=0xff0000,
+                                  description=e)
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @setup.error
     async def setup_error(self, interaction: discord.Interaction, error):
         if isinstance(error, app_commands.errors.MissingPermissions):
-            embed = discord.Embed(title="Error", color=0x3083e3, description="You don't have permissions to run this command! Please consult your **server admin**.")
+            embed = discord.Embed(title="Error", color=0xff0000, description="You don't have permissions to run this command! Please consult your **server admin**.")
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @app_commands.command(description="Add admin role")
@@ -49,17 +51,19 @@ class ServerGroup(app_commands.Group):
             role_id_int = int(role_id)
             guild_id = interaction.guild.id
             guild = await self.service.get_guild_by_id(guild_id)
-            if not guild:
-                raise ObjectDoesntExistsInDBError("Server doesn't exist! Please run **/server setup**")
             await self.service.add_admin_role(guild_id, role_id_int)
-            await interaction.response.send_message(f"Added role: <@&{role_id}> to admin role", ephemeral=False)
+            embed = discord.Embed(title="Add Admin Role Success!", color=0xffff00,
+                                  description=f"Added role: <@&{role_id}> to admin role")
+            return await interaction.response.send_message(embed=embed, ephemeral=False)
         except (ParameterIsNullError, ObjectExistsInDBError, ObjectDoesntExistsInDBError, ValueError) as e:
-            await interaction.response.send_message(e)
+            embed = discord.Embed(title="Error", color=0xff0000,
+                                  description=e)
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @addadminrole.error
     async def addadminrole_error(self, interaction: discord.Interaction, error):
         if isinstance(error, app_commands.errors.MissingPermissions):
-            embed = discord.Embed(title="Error", color=0x3083e3, description="You don't have permissions to run this command! Please consult your **server admin**.")
+            embed = discord.Embed(title="Error", color=0xff0000, description="You don't have permissions to run this command! Please consult your **server admin**.")
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @app_commands.command(description="Remove admin role")
@@ -70,17 +74,19 @@ class ServerGroup(app_commands.Group):
             role_id_int = int(role_id)
             guild_id = interaction.guild.id
             guild = await self.service.get_guild_by_id(guild_id)
-            if not guild:
-                raise ObjectDoesntExistsInDBError("Server doesn't exist! Please run **/server setup**")
             await self.service.remove_admin_role(guild_id, role_id_int)
-            await interaction.response.send_message(f"Removed role: <@&{role_id}> from admin role", ephemeral=False)
+            embed = discord.Embed(title="Remove Admin Role Success!", color=0xffff00,
+                                  description=f"Removed role: <@&{role_id}> from admin role")
+            return await interaction.response.send_message(embed=embed, ephemeral=False)
         except (ParameterIsNullError, ObjectExistsInDBError, ObjectDoesntExistsInDBError, ValueError) as e:
-            await interaction.response.send_message(e)
+            embed = discord.Embed(title="Error", color=0xff0000,
+                                  description=e)
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @removeadminrole.error
     async def removeadminrole_error(self, interaction: discord.Interaction, error):
         if isinstance(error, app_commands.errors.MissingPermissions):
-            embed = discord.Embed(title="Error", color=0x3083e3, description="You don't have permissions to run this command! Please consult your **server admin**.")
+            embed = discord.Embed(title="Error", color=0xff0000, description="You don't have permissions to run this command! Please consult your **server admin**.")
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @app_commands.command(description="Add lead role")
@@ -90,19 +96,22 @@ class ServerGroup(app_commands.Group):
             role_id_int = int(role_id)
             guild_id = interaction.guild.id
             guild = await self.service.get_guild_by_id(guild_id)
-            if not guild:
-                raise ObjectDoesntExistsInDBError("Server doesn't exist! Please run **/server setup**")
             user_roles = interaction.user.roles
             guild_admins = await self.service.get_guild_admin(guild_id)
             for user_role in user_roles:
                 for guild_admin in guild_admins:
                     if user_role.id == guild_admin[2]:
                         await self.service.add_lead_role(guild_id, role_id_int)
-                        await interaction.response.send_message(f"Added <@&{role_id}> as a lead role!")
-                        return
-            await interaction.response.send_message(f"You don't have permission to use this command!")
+                        embed = discord.Embed(title="Add Lead Role Success!", color=0xffff00,
+                                  description=f"Added <@&{role_id}> as a lead role!")
+                        return await interaction.response.send_message(embed=embed, ephemeral=False)
+            embed = discord.Embed(title="Error", color=0xff0000,
+                                  description=e)
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
         except (ParameterIsNullError, ObjectExistsInDBError, ObjectDoesntExistsInDBError, ValueError) as e:
-            await interaction.response.send_message(e)
+            embed = discord.Embed(title="Error", color=0xff0000,
+                                  description=e)
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @app_commands.command(description="Remove lead role")
     async def removeleadrole(self, interaction: discord.Interaction, role_id: str):
@@ -111,8 +120,6 @@ class ServerGroup(app_commands.Group):
             role_id_int = int(role_id)
             guild_id = interaction.guild.id
             guild = await self.service.get_guild_by_id(guild_id)
-            if not guild:
-                raise ObjectDoesntExistsInDBError("Server doesn't exist! Please run **/server setup**")
             user_roles = interaction.user.roles
             guild_admins = await self.service.get_guild_admin(guild_id)
             for user_role in user_roles:
@@ -120,10 +127,16 @@ class ServerGroup(app_commands.Group):
                     if user_role.id == guild_admin[2]:
                         await self.service.remove_lead_role(guild_id, role_id_int)
                         await interaction.response.send_message(f"Removed <@&{role_id}> from the lead role!")
-                        return
-            await interaction.response.send_message(f"You don't have permission to use this command!")
+                        embed = discord.Embed(title="Remove Lead Role Success!", color=0xffff00,
+                                  description=f"Removed <@&{role_id}> from the lead role!")
+                        return await interaction.response.send_message(embed=embed, ephemeral=False)
+            embed = discord.Embed(title="Error", color=0xff0000,
+                                  description=e)
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
         except (ParameterIsNullError, ObjectExistsInDBError, ObjectDoesntExistsInDBError, ValueError) as e:
-            await interaction.response.send_message(e)
+            embed = discord.Embed(title="Error", color=0xff0000,
+                                  description=e)
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
 async def setup(bot):

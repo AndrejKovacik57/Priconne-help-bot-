@@ -35,7 +35,7 @@ class CreateGroup(app_commands.Group):
                         return await interaction.response.send_message(f"Created clan: **{clan.name}**")
             return await interaction.response.send_message('blabla')
         except (ObjectExistsInDBError, ObjectDoesntExistsInDBError) as e:
-            embed = discord.Embed(title=f"Error", color=0x3083e3,
+            embed = discord.Embed(title=f"Error", color=0xff0000,
                                   description=e)
             return await interaction.response.send_message(embed=embed, ephemeral=True)
 
@@ -47,12 +47,12 @@ class CreateGroup(app_commands.Group):
             guild_id = interaction.guild.id
             await self.service.get_guild_by_id(guild_id)
             player = await self.service.create_player(player_name, interaction.user.id)
-            embed = discord.Embed(title="Created Player Success!", color=0x3083e3,
+            embed = discord.Embed(title="Created Player Success!", color=0xffff00,
                                 description=f"Created player: **{player.name}**")
             return await interaction.response.send_message(embed=embed, ephemeral=False)
 
         except (ObjectDoesntExistsInDBError, ObjectExistsInDBError) as e:
-            embed = discord.Embed(title=f"Error", color=0x3083e3,
+            embed = discord.Embed(title=f"Error", color=0xff0000,
                                   description=e)
             return await interaction.response.send_message(embed=embed, ephemeral=True)
     
@@ -70,16 +70,16 @@ class CreateGroup(app_commands.Group):
                 for role in roles:
                     if user_role.id == role[2]:
                         player = await self.service.create_player(player_name, discord_id)
-                        embed = discord.Embed(title="Created Player Success!", color=0x3083e3,
+                        embed = discord.Embed(title="Created Player Success!", color=0xffff00,
                                 description=f"Created player: **{player.name}** for <@{discord_id}>")
                         return await interaction.response.send_message(embed=embed)
-            embed = discord.Embed(title="Error", color=0x3083e3,
+            embed = discord.Embed(title="Error", color=0xff0000,
                                 description="""
                     You don't have permission to use this command!
                 """)
             return await interaction.response.send_message(embed=embed, ephemeral=True)
         except (ObjectDoesntExistsInDBError, ObjectExistsInDBError) as e:
-            embed = discord.Embed(title=f"Error", color=0x3083e3,
+            embed = discord.Embed(title=f"Error", color=0xff0000,
                                   description=e)
             return await interaction.response.send_message(embed=embed, ephemeral=True)
 
@@ -100,7 +100,7 @@ class CreateGroup(app_commands.Group):
                         for clan in clans:
                             exists = await self.service.exists_cb_in_date_by_clan_id(start_date, clan.clan_id)
                             if exists:
-                                embed = discord.Embed(title="Error", color=0x3083e3,
+                                embed = discord.Embed(title="Error", color=0xff0000,
                                     description=f"Cant create clan battle because there is clan battle at this date: {exists}")
                                 return await interaction.response.send_message(embed=embed, ephemeral=True)
                             cb = await self.service.create_clan_battle(clan.clan_id, cb_name, start_date)
@@ -116,15 +116,15 @@ class CreateGroup(app_commands.Group):
                             boss1 = await self.service.get_boss_by_boss_number(1, cb.cb_id)
                             boss1.active = True
                             await self.service.update_boss(boss1)
-                            embed = discord.Embed(title="Create clan battle success!", color=0x3083e3,
+                            embed = discord.Embed(title="Create clan battle success!", color=0xffff00,
                                 description=f"Created clan battle for all clans on `{start_date}`")
                             return await interaction.response.send_message(embed=embed, ephemeral=False)
-            embed = discord.Embed(title="Error", color=0x3083e3,
+            embed = discord.Embed(title="Error", color=0xff0000,
                                 description=f"You don't have permission to use this command!")
             return await interaction.response.send_message(embed=embed, ephemeral=True)
         except (ObjectExistsInDBError, ObjectDoesntExistsInDBError, PlayerCBDayInfoLimitOfEntriesForPlayerAndCBReached
                 , ObjectDoesntExistsInDBError, ValueError) as e:
-            embed = discord.Embed(title=f"Error", color=0x3083e3,
+            embed = discord.Embed(title=f"Error", color=0xff0000,
                                   description=e)
             return await interaction.response.send_message(embed=embed, ephemeral=True)
 
@@ -150,7 +150,7 @@ class CreateGroup(app_commands.Group):
 
         except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDaysError, ValueError, ObjectDoesntExistsInDBError,
                 NoActiveCBError) as e:
-            embed = discord.Embed(title=f"Error", color=0x3083e3,
+            embed = discord.Embed(title=f"Error", color=0xff0000,
                                   description=e)
             return await interaction.response.send_message(embed=embed, ephemeral=True)
 

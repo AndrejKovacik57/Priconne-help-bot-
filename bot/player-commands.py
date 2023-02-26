@@ -31,7 +31,7 @@ class PlayerGroup(app_commands.Group):
 
             await interaction.response.send_message(f"You have deleted player: {player}")
         except ObjectDoesntExistsInDBError as e:
-            embed = discord.Embed(title=f"Error", color=0x3083e3,
+            embed = discord.Embed(title="Error", color=0xff0000,
                                   description=e)
             return await interaction.response.send_message(embed=embed, ephemeral=True)
 
