@@ -31,7 +31,9 @@ class PlayerGroup(app_commands.Group):
 
             await interaction.response.send_message(f"You have deleted player: {player}")
         except ObjectDoesntExistsInDBError as e:
-            await interaction.response.send_message(e)
+            embed = discord.Embed(title=f"Error", color=0x3083e3,
+                                  description=e)
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
 
 # idk if we need this commands we have clan check get hitters etc
     # @app_commands.command(description="Check info about specified player")

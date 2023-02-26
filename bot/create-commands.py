@@ -35,7 +35,9 @@ class CreateGroup(app_commands.Group):
                         return await interaction.response.send_message(f"Created clan: **{clan.name}**")
             return await interaction.response.send_message('blabla')
         except (ObjectExistsInDBError, ObjectDoesntExistsInDBError) as e:
-            await interaction.response.send_message(e)
+            embed = discord.Embed(title=f"Error", color=0x3083e3,
+                                  description=e)
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @app_commands.command(description="Create player")
     @app_commands.describe(player_name="Player to create")
@@ -45,10 +47,14 @@ class CreateGroup(app_commands.Group):
             guild_id = interaction.guild.id
             await self.service.get_guild_by_id(guild_id)
             player = await self.service.create_player(player_name, interaction.user.id)
-            await interaction.response.send_message(f"Created player: **{player.name}**")
+            embed = discord.Embed(title="Created Player Success!", color=0x3083e3,
+                                description=f"Created player: **{player.name}**")
+            return await interaction.response.send_message(embed=embed)
 
         except (ObjectDoesntExistsInDBError, ObjectExistsInDBError) as e:
-            await interaction.response.send_message(e)
+            embed = discord.Embed(title=f"Error", color=0x3083e3,
+                                  description=e)
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
     
     @app_commands.command(description="Create player for someone else")
     @app_commands.describe(player_name="Player to create", discord_id="ID of person to create player for")
@@ -64,7 +70,7 @@ class CreateGroup(app_commands.Group):
                 for role in roles:
                     if user_role.id == role[2]:
                         player = await self.service.create_player(player_name, discord_id)
-                        embed = discord.Embed(title="Created", color=0x3083e3,
+                        embed = discord.Embed(title="Created Player Success!", color=0x3083e3,
                                 description=f"Created player: **{player.name}** for <@{discord_id}>")
                         return await interaction.response.send_message(embed=embed)
             embed = discord.Embed(title="Error", color=0x3083e3,
@@ -73,7 +79,9 @@ class CreateGroup(app_commands.Group):
                 """)
             return await interaction.response.send_message(embed=embed, ephemeral=True)
         except (ObjectDoesntExistsInDBError, ObjectExistsInDBError) as e:
-            await interaction.response.send_message(e)
+            embed = discord.Embed(title=f"Error", color=0x3083e3,
+                                  description=e)
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @app_commands.command(description="Create clan battle")
     @app_commands.describe(cb_name="Ex. CB25", start_date="Date format is DD-MM-YYYY")
@@ -94,8 +102,6 @@ class CreateGroup(app_commands.Group):
                             if exists:
                                 embed = discord.Embed(title="Error", color=0x3083e3,
                                     description=f"Cant create clan battle because there is clan battle at this date: {exists}")
-                                # error_message = f'Cant create clan battle because there is clan battle at this date: ' \
-                                #                 f'{exists}'
                                 return await interaction.response.send_message(embed=embed, ephemeral=True)
                             cb = await self.service.create_clan_battle(clan.clan_id, cb_name, start_date)
                             cb.active = True
@@ -118,7 +124,9 @@ class CreateGroup(app_commands.Group):
             return await interaction.response.send_message(embed=embed, ephemeral=True)
         except (ObjectExistsInDBError, ObjectDoesntExistsInDBError, PlayerCBDayInfoLimitOfEntriesForPlayerAndCBReached
                 , ObjectDoesntExistsInDBError, ValueError) as e:
-            await interaction.response.send_message(e)
+            embed = discord.Embed(title=f"Error", color=0x3083e3,
+                                  description=e)
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @app_commands.command(description="Create team composition")
     @app_commands.describe(comp="Team composition to create for current day", player_name='Name of your account')
@@ -142,7 +150,9 @@ class CreateGroup(app_commands.Group):
 
         except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDaysError, ValueError, ObjectDoesntExistsInDBError,
                 NoActiveCBError) as e:
-            await interaction.response.send_message(e)
+            embed = discord.Embed(title=f"Error", color=0x3083e3,
+                                  description=e)
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
 async def setup(bot):
