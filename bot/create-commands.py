@@ -49,7 +49,7 @@ class CreateGroup(app_commands.Group):
             player = await self.service.create_player(player_name, interaction.user.id)
             embed = discord.Embed(title="Created Player Success!", color=0x3083e3,
                                 description=f"Created player: **{player.name}**")
-            return await interaction.response.send_message(embed=embed)
+            return await interaction.response.send_message(embed=embed, ephemeral=False)
 
         except (ObjectDoesntExistsInDBError, ObjectExistsInDBError) as e:
             embed = discord.Embed(title=f"Error", color=0x3083e3,
