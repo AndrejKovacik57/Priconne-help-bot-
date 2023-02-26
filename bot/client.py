@@ -682,7 +682,7 @@ def run_discord_bot():
                 hitter_hits = ''
                 for hitter in hitters:
                     hitter_names += f"{hitter[0]}\n"
-                    hitter_hits += f"{hitter[1]/3}\n"
+                    hitter_hits += f"{hitter[1]}/3\n"
 
                 if len(hitters) == 0:
                     embed = discord.Embed(title="All Done!", color=0xffff00,
