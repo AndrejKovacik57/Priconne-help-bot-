@@ -432,10 +432,12 @@ def run_discord_bot():
                 hits_left = await service.get_today_hits_left(cb_day, cb.cb_id)
                 ranking = await scrape_clan_rankings(clan.name)
                 boss = await service.get_active_boss_by_cb_id(cb.cb_id)
-                await interaction.response.send_message(f"Hits left: {hits_left}/90\n"
-                                                        f"Current lap: {cb.lap}\n"
-                                                        f"Current boss: {boss.name}\n"
-                                                        f"Clan ranking: {ranking}")
+                embed=discord.Embed(title=f"{clan.name}", color=0x3083e3,
+                                    description=f"Hits Left: {hits_left}/90\n"
+                                                f"Lap: {cb.lap}\n"
+                                                f"Boss: {boss.name}\n"
+                                                f"Clan Rank: {ranking}")
+                return await interaction.response.send_message(embed=embed, ephemeral=False)
             else:
                 await interaction.response.send_message(f"Not a cb day")
         except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDaysError, ObjectDoesntExistsInDBError,
