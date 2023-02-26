@@ -16,24 +16,6 @@ class ClanGroup(app_commands.Group):
         super().__init__(*args, **kwargs)
         self.service = Service("priconne_database")
 
-    #
-    # @app_commands.command(description="Check info regarding clan")
-    # async def check(self, interaction: discord.Interaction):
-    #     """ Check clan """
-    #     try:
-    #         guild_id = interaction.guild.id
-    #         guild = await self.service.get_guild_by_id(guild_id)
-    #         if not guild:
-    #             raise ObjectDoesntExistsInDBError("Server doesn't exist! Please run **/server setup**")
-    #         # service.get_clan_battles_in_clan("Automatically fetched clan_id / clan_name")
-    #         await interaction.response.send_message(
-    #             f"__**Info for clan: \_\_\_**__"
-    #             f"\nPosition: \_\_\_\nLap: \_\_\_"
-    #             f"\nTier: (A/B/C/D)\nBoss: \_\_\_"
-    #             f"\nHits Remaining: \_\_\_")
-    #     except:
-    #         return ""
-
     @app_commands.command(description="List all clans")
     async def list(self, interaction: discord.Interaction):
         """ List of clans """
@@ -45,11 +27,13 @@ class ClanGroup(app_commands.Group):
             message_string = ''
             for clan in clan_list:
                 message_string += f"- {clan.name}\n"
-            await interaction.response.send_message(
-                f"__List of clans__"
-                f"\n{message_string}")
+            embed = discord.Embed(title="Clan List", color=0x3083e3,
+                                description=f"{message_string}")
+            return await interaction.response.send_message(embed=embed, ephemeral=False)
         except ObjectDoesntExistsInDBError as e:
-            await interaction.response.send_message(e)
+            embed = discord.Embed(title=f"Error", color=0x3083e3,
+                                  description=e)
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @app_commands.command(description="Update name of clan")
     @app_commands.describe(clan_name="Clan name to update", newname="New name to change clan to")
@@ -69,12 +53,17 @@ class ClanGroup(app_commands.Group):
                         existing_clan = await self.service.get_clan_by_name(clan_name)
                         existing_clan.name = newname
                         await self.service.update_clan(existing_clan)
-                        return await interaction.response.send_message(
-                            f"Changed clan name from **{clan_name}** to **{newname}**")
+                        embed = discord.Embed(title="Clan name update success!", color=0x3083e3,
+                                description=f"Changed clan name from **{clan_name}** to **{newname}**")
+                        return await interaction.response.send_message(embed=embed, ephemeral=False)
 
-            return await interaction.response.send_message(f"You don't have permission to use this command!")
+            embed = discord.Embed(title="Error", color=0x3083e3,
+                                description=f"You don't have permission to use this command!")
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
         except (ObjectDoesntExistsInDBError, ParameterIsNullError) as e:
-            await interaction.response.send_message(e)
+            embed = discord.Embed(title=f"Error", color=0x3083e3,
+                                  description=e)
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @app_commands.command(description="Check players in clan")
     async def playerlist(self, interaction: discord.Interaction, clan: str):
@@ -83,16 +72,19 @@ class ClanGroup(app_commands.Group):
             guild_id = interaction.guild.id
             await self.service.get_guild_by_id(guild_id)
             player_list = await self.service.get_players_from_clan_name(clan)
-            # print(player_list)
             message_string = ''
             i = 1
             for player in player_list:
                 player_name = player[1]
                 message_string += f"{i}. {player_name}\n"
                 i += 1
-            await interaction.response.send_message(f"List of players in clan: **{clan}**\n{message_string}")
+            embed = discord.Embed(title=f"List of players in **{clan}**", color=0x3083e3,
+                                description=f"{message_string}")
+            return await interaction.response.send_message(embed=embed, ephemeral=False)
         except (ObjectDoesntExistsInDBError, PlayerNotInClanError) as e:
-            await interaction.response.send_message(e)
+            embed = discord.Embed(title=f"Error", color=0x3083e3,
+                                  description=e)
+            await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @app_commands.command(description="Add player to clan")
     @app_commands.describe(player="Player to add", clan="Clan to add player to")
@@ -111,12 +103,18 @@ class ClanGroup(app_commands.Group):
                         player_to_add = await self.service.get_player_by_name(player)
                         clan_to_join = await self.service.get_clan_by_name(clan)
                         await self.service.add_player_to_clan(clan_to_join.clan_id, player_to_add.player_id)
-                        return await interaction.response.send_message(f"Added **{player}** to clan: **{clan}**.")
+                        embed = discord.Embed(title="Add success!", color=0x3083e3,
+                                description=f"Added **{player}** to clan: **{clan}**.")
+                        return await interaction.response.send_message(embed=embed, ephemeral=False)
 
-            return await interaction.response.send_message(f"You don't have permission to use this command!")
+            embed = discord.Embed(title="Error", color=0x3083e3,
+                                description=f"You don't have permission to use this command!")
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
         except (ObjectDoesntExistsInDBError, ObjectExistsInDBError, ParameterIsNullError, PlayerAlreadyInClanError,
                 ObjectDoesntExistsInDBError) as e:
-            await interaction.response.send_message(e)
+            embed = discord.Embed(title=f"Error", color=0x3083e3,
+                                  description=e)
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @app_commands.command(description="Join clan")
     @app_commands.describe(player="Player to add", clan="Clan to join")
@@ -128,10 +126,14 @@ class ClanGroup(app_commands.Group):
             player_to_add = await self.service.get_player_by_name(player)
             clan_to_join = await self.service.get_clan_by_name(clan)
             await self.service.add_player_to_clan(clan_to_join.clan_id, player_to_add.player_id)
-            await interaction.response.send_message(f"Joined __{clan}__ under player: **{player}**.")
+            embed = discord.Embed(title="Join success!", color=0x3083e3,
+                                description=f"Joined __{clan}__ under player: **{player}**.")
+            await interaction.response.send_message(embed=embed, ephemeral=False)
         except (ObjectDoesntExistsInDBError, ObjectExistsInDBError, ParameterIsNullError, PlayerAlreadyInClanError,
                 ObjectDoesntExistsInDBError) as e:
-            await interaction.response.send_message(e)
+            embed = discord.Embed(title=f"Error", color=0x3083e3,
+                                  description=e)
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @app_commands.command(description="Remove player from clan")
     @app_commands.describe(player="Player to remove", clan="Clan to remove player from")
@@ -149,13 +151,17 @@ class ClanGroup(app_commands.Group):
                         player_to_remove = await self.service.get_player_by_name(player)
                         from_clan = await self.service.get_clan_by_name(clan)
                         await self.service.remove_player_from_clan(from_clan.clan_id, player_to_remove.player_id)
-                        return await interaction.response.send_message(f"Removed **{player}** from clan: **{clan}**.")
-
-            return await interaction.response.send_message(f"You don't have permission to use this command!")
-        except (
-                ObjectDoesntExistsInDBError, ParameterIsNullError, PlayerNotInClanError,
+                        embed = discord.Embed(title="Remove success!", color=0x3083e3,
+                                description=f"Removed **{player}** from clan: **{clan}**.")
+                        return await interaction.response.send_message(embed=embed, ephemeral=False)
+            embed = discord.Embed(title="Error", color=0x3083e3,
+                                description=f"You don't have permission to use this command!")
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
+        except (ObjectDoesntExistsInDBError, ParameterIsNullError, PlayerNotInClanError,
                 ObjectDoesntExistsInDBError) as e:
-            await interaction.response.send_message(e)
+            embed = discord.Embed(title=f"Error", color=0x3083e3,
+                                  description=e)
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @app_commands.command(name="endcb", description="Ends cb")
     async def end_cb(self, interaction: discord.Interaction):
@@ -174,13 +180,18 @@ class ClanGroup(app_commands.Group):
                             cb = await self.service.get_clan_battle_active_by_clan_id(clan.clan_id)
                             cb.active = False
                             await self.service.update_clan_batte(cb)
-                            return await interaction.response.send_message(f"Clan battle {cb.name} has ended")
+                            embed = discord.Embed(title="CB End Success!", color=0x3083e3,
+                                description=f"Clan battle {cb.name} has ended")
+                            return await interaction.response.send_message(embed=embed, ephemeral=False)
 
-            return await interaction.response.send_message(f"You don't have permission to use this command!")
-        except (
-                ObjectDoesntExistsInDBError, ParameterIsNullError, PlayerNotInClanError,
+            embed = discord.Embed(title="Error", color=0x3083e3,
+                                description=f"You don't have permission to use this command!")
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
+        except (ObjectDoesntExistsInDBError, ParameterIsNullError, PlayerNotInClanError,
                 ObjectDoesntExistsInDBError) as e:
-            await interaction.response.send_message(e)
+            embed = discord.Embed(title=f"Error", color=0x3083e3,
+                                  description=e)
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @app_commands.command(name="editlap", description="Edits lap")
     @app_commands.describe(lap="Current lap", player_name='Name of your account')
@@ -224,14 +235,18 @@ class ClanGroup(app_commands.Group):
                             await update_bosses_when_tier_change(self.service, cb, boss_char, boss_tier, False)
 
                         await self.service.update_clan_batte(cb)
-                        return await interaction.response.send_message(
-                            f"You have changed lap to {lap} and tier to {boss_tier}")
+                        embed = discord.Embed(title="Edit Lap Success!", color=0x3083e3,
+                                description=f"You have changed lap to {lap} and tier to {boss_tier}")
+                        return await interaction.response.send_message(embed=embed, ephemeral=False)
 
-            return await interaction.response.send_message(f"You don't have permission to use this command!")
-        except (
-                ObjectDoesntExistsInDBError, ParameterIsNullError, PlayerNotInClanError,
+            embed = discord.Embed(title="Error", color=0x3083e3,
+                                description=f"You don't have permission to use this command!")
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
+        except (ObjectDoesntExistsInDBError, ParameterIsNullError, PlayerNotInClanError,
                 ObjectDoesntExistsInDBError) as e:
-            await interaction.response.send_message(e)
+            embed = discord.Embed(title=f"Error", color=0x3083e3,
+                                  description=e)
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @app_commands.command(name="changeboss", description="Changes current boss")
     @app_commands.describe(boss_num="Boss number", player_name='Name of your account')
@@ -258,14 +273,18 @@ class ClanGroup(app_commands.Group):
                         boss = await self.service.get_boss_by_boss_number(boss_num, cb.cb_id)
                         boss.active = True
                         boss = await self.service.update_boss(boss)
+                        embed = discord.Embed(title="Change Boss Success!", color=0x3083e3,
+                                description=f"You have changed active boss to {boss.name}")
+                        return await interaction.response.send_message(embed=embed, ephemeral=False)
 
-                        return await interaction.response.send_message(f"You have changed active boss to {boss.name}")
-
-            return await interaction.response.send_message(f"You don't have permission to use this command!")
-        except (
-                ObjectDoesntExistsInDBError, ParameterIsNullError, PlayerNotInClanError,
+            embed = discord.Embed(title="Error", color=0x3083e3,
+                                description=f"You don't have permission to use this command!")
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
+        except (ObjectDoesntExistsInDBError, ParameterIsNullError, PlayerNotInClanError,
                 ObjectDoesntExistsInDBError) as e:
-            await interaction.response.send_message(e)
+            embed = discord.Embed(title=f"Error", color=0x3083e3,
+                                  description=e)
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @app_commands.command(name="edithits", description="Changes hits for player")
     @app_commands.describe(player_name='Name of account', hits='Hits left')
@@ -289,8 +308,9 @@ class ClanGroup(app_commands.Group):
                         clan_player = await self.service.get_clan_player(player.player_id)
                         clan = clan_player[1]
                         if clan not in clans:
-                            await interaction.response.send_message(f"Player: {player_name} is not in any of clans "
-                                                                    f"on you server")
+                            embed = discord.Embed(title="Change Boss Success!", color=0x3083e3,
+                                description=f"**{player_name}** is not in any clans on your server")
+                            return await interaction.response.send_message(embed=embed, ephemeral=False)
 
                         cb = await self.service.get_clan_battle_active_by_clan_id(clan.clan_id)
                         cb_day = get_cb_day(cb)
@@ -298,14 +318,17 @@ class ClanGroup(app_commands.Group):
                                                                                           cb_day)
                         pcdi.hits = hits
                         await self.service.update_pcdi(pcdi)
+                        embed = discord.Embed(title="Edit Hits Success!", color=0x3083e3,
+                                description=f"You have changed today\'s hits to {hits} for {player_name}")
+                        return await interaction.response.send_message(embed=embed, ephemeral=False)
 
-                        return await interaction.response.send_message(f"You have changed today\'s hits to {hits} for "
-                                                                       f"{player_name}")
-
-            return await interaction.response.send_message(f"You don't have permission to use this command!")
-        except (
-                ParameterIsNullError, PlayerNotInClanError, ObjectDoesntExistsInDBError) as e:
-            await interaction.response.send_message(e)
+            embed = discord.Embed(title="Error", color=0x3083e3,
+                                description=f"You don't have permission to use this command!")
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
+        except (ParameterIsNullError, PlayerNotInClanError, ObjectDoesntExistsInDBError) as e:
+            embed = discord.Embed(title=f"Error", color=0x3083e3,
+                                  description=e)
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @app_commands.command(name="deletecb", description="Delete clan battle and related information")
     @app_commands.describe(cb_name='Clan battle name')
@@ -326,10 +349,13 @@ class ClanGroup(app_commands.Group):
                                 f'You have deleted cb: {cb_name} and all related information '
                                 f'for clans in your server')
 
-            return await interaction.response.send_message(f"You don't have permission to use this command!")
-
+            embed = discord.Embed(title="Error", color=0x3083e3,
+                                description=f"You don't have permission to use this command!")
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
         except ObjectDoesntExistsInDBError as e:
-            return await interaction.response.send_message(e)
+            embed = discord.Embed(title=f"Error", color=0x3083e3,
+                                  description=e)
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
 async def setup(bot):

@@ -49,9 +49,9 @@ def run_discord_bot():
 
     @client.tree.command(name="hello")
     async def hello(interaction: discord.Interaction):
-        await interaction.response.send_message(
-            f"Hi fellow cosplayer {interaction.user.mention}! Your Discord ID is {interaction.user.id}. I'm Marin",
-            ephemeral=False)
+        embed = discord.Embed(title="Hello!", color=0x3083e3,
+                              description=f"Hi fellow cosplayer {interaction.user.mention}! I'm Marin, and your Discord ID is {interaction.user.id}.")
+        return await interaction.response.send_message(embed=embed, ephemeral=False)
 
     @client.tree.command(name="help")
     @app_commands.describe(type='Basic | Server | Create | Clan | Player | CB 1 | CB 2 | Admin | Lead')
@@ -218,55 +218,6 @@ def run_discord_bot():
         except:
             return ""
 
-    ### GENERAL COMMANDS ###
-
-    # @client.tree.command(name="bossavailability", description="Displays hit bookings on all bosses")
-    # async def bossavailability(interaction: discord.Interaction):
-    #     """ Check info regarding boss availability """
-    #     try:
-    #         guild = await service.get_guild_by_id(interaction.guild.id)
-    #         if not guild:
-    #             raise ObjectDoesntExistsInDBError("Server doesn't exist! Please run **/server setup**")
-    #         await interaction.response.send_message(
-    #             f"__**Overflow Count: \_\_\_**__"
-    #             f"\nBoss 1: \_\_ hits booked"
-    #             f"\nBoss 2: \_\_ hits booked"
-    #             f"\nBoss 3: \_\_ hits booked"
-    #             f"\nBoss 4: \_\_ hits booked"
-    #             f"\nBoss 5: \_\_ hits booked")
-    #     except:
-    #         return ""
-
-    # @client.tree.command(name="ovf", description="Overflows currently in clan")
-    # async def ovf(interaction: discord.Interaction):
-    #     """ Check info regarding overflows existing in clan """
-    #     try:
-    #         guild = await service.get_guild_by_id(interaction.guild.id)
-    #         if not guild:
-    #             raise ObjectDoesntExistsInDBError("Server doesn't exist! Please run **/server setup**")
-    #         await interaction.response.send_message(
-    #             f"__**Overflow Count:**__ \_\_\_"
-    #             f"\nPlayer: \_\_\_\_"
-    #             f"\nBoss: \_\_\_"
-    #             f"\nTime: \_\_:\_\_"
-    #             f"\nEstimated Damage: \_\_\_\_")
-    #     except:
-    #         return ""
-
-    # @client.tree.command(name="bookhit", description="Book a hit on this boss")
-    # @app_commands.describe(boss="Boss", expecteddamage="Expected damage")
-    # async def bookhit(interaction: discord.Interaction, boss: str, expected_damage: str):
-    #     """ Book a hit on boss """
-    #     try:
-    #         guild = await service.get_guild_by_id(interaction.guild.id)
-    #         if not guild:
-    #             raise ObjectDoesntExistsInDBError("Server doesn't exist! Please run **/server setup**")
-    #         await interaction.response.send_message(
-    #             f"Booked hit on boss: {boss}"
-    #             f"\nWith expected damage: {expected_damage}")
-    #     except ObjectDoesntExistsInDBError as e:
-    #         await interaction.response.send_message(e)
-
     @client.tree.command(name="hit", description="Register hit")
     @app_commands.describe(comp="Ex. A32, D302SA", player_name='Name of your account')
     async def hit(interaction: discord.Interaction, comp: str, player_name: Optional[str] = None):
@@ -275,7 +226,9 @@ def run_discord_bot():
             await service.get_guild_by_id(interaction.guild.id)
             await hit_kill(service, interaction, comp, player_name)
         except (ObjectDoesntExistsInDBError, ValueError) as e:
-            await interaction.response.send_message(e)
+            embed = discord.Embed(title=f"Error", color=0x3083e3,
+                                  description=e)
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @client.tree.command(name="pilothit", description="Pilot and register hit")
     @app_commands.describe(comp="Name of team composition",
@@ -286,7 +239,9 @@ def run_discord_bot():
             await service.get_guild_by_id(interaction.guild.id)
             await hit_kill(service, interaction, comp, piloted_player_name, pilot=True)
         except (ObjectDoesntExistsInDBError, PlayerNotInClanError, ValueError) as e:
-            await interaction.response.send_message(e)
+            embed = discord.Embed(title=f"Error", color=0x3083e3,
+                                  description=e)
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @client.tree.command(name="kill", description="Record hit and killing of the boss")
     @app_commands.describe(comp="Team composition name", player_name='Name of your account', ovf_time="Ovf time")
@@ -296,7 +251,9 @@ def run_discord_bot():
             await service.get_guild_by_id(interaction.guild.id)
             await hit_kill(service, interaction, comp, player_name, ovf_time=ovf_time)
         except (ObjectDoesntExistsInDBError, ValueError) as e:
-            await interaction.response.send_message(e)
+            embed = discord.Embed(title=f"Error", color=0x3083e3,
+                                  description=e)
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @client.tree.command(name="pilotkill", description="Pilot and register kill")
     @app_commands.describe(comp="Name of team composition",
@@ -307,7 +264,9 @@ def run_discord_bot():
             await service.get_guild_by_id(interaction.guild.id)
             await hit_kill(service, interaction, comp, piloted_player_name, ovf_time=ovf_time, pilot=True)
         except (ObjectDoesntExistsInDBError, PlayerNotInClanError, NoActiveCBError, ValueError) as e:
-            await interaction.response.send_message(e)
+            embed = discord.Embed(title=f"Error", color=0x3083e3,
+                                  description=e)
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @client.tree.command(name="ovfhit", description="Removes ovf from your profile")
     @app_commands.describe(player_name='Name of your account')
@@ -337,7 +296,9 @@ def run_discord_bot():
             else:
                 await interaction.response.send_message(f"Today is not cb day")
         except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDaysError, ObjectDoesntExistsInDBError, NoActiveCBError) as e:
-            return await interaction.response.send_message(e)
+            embed = discord.Embed(title=f"Error", color=0x3083e3,
+                                  description=e)
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @client.tree.command(name="pilotovfhit", description="Removes ovf from your profile")
     @app_commands.describe(piloted_player_name='Name of the player that was piloted')
@@ -370,7 +331,9 @@ def run_discord_bot():
                 await interaction.response.send_message(f"Today is not cb day")
         except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDaysError, ObjectDoesntExistsInDBError,
                 ValueError, NoActiveCBError) as e:
-            return await interaction.response.send_message(e)
+            embed = discord.Embed(title=f"Error", color=0x3083e3,
+                                  description=e)
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @client.tree.command(name="ovfkill", description="Kill boss with ovf and removes ovf from your profile")
     @app_commands.describe(player_name='Name of your account')
@@ -400,7 +363,9 @@ def run_discord_bot():
             else:
                 await interaction.response.send_message(f"Today is not cb day")
         except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDaysError, ObjectDoesntExistsInDBError) as e:
-            return await interaction.response.send_message(e)
+            embed = discord.Embed(title=f"Error", color=0x3083e3,
+                                  description=e)
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @client.tree.command(name="pilotovfkill", description="Kill boss with ovf and removes ovf from your profile")
     @app_commands.describe(piloted_player_name='Name of the player that was piloted')
@@ -435,7 +400,9 @@ def run_discord_bot():
                 await interaction.response.send_message(f"Today is not cb day")
         except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDaysError, ObjectDoesntExistsInDBError,
                 ValueError) as e:
-            return await interaction.response.send_message(e)
+            embed = discord.Embed(title=f"Error", color=0x3083e3,
+                                  description=e)
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @client.tree.command(name="check", description="Checks status of clan")
     @app_commands.describe(cb_day='Day of cb, leave empty for today', player_name='Name of the player')
@@ -466,7 +433,9 @@ def run_discord_bot():
                 await interaction.response.send_message(f"Not a cb day")
         except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDaysError, ObjectDoesntExistsInDBError,
                 NoActiveCBError, ValueError) as e:
-            return await interaction.response.send_message(e)
+            embed = discord.Embed(title=f"Error", color=0x3083e3,
+                                  description=e)
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @client.tree.command(name="selfcheck", description="Checks status of yourself")
     @app_commands.describe(player_name='Name of your account', cb_day='Day of cb, leave empty for today')
@@ -502,7 +471,9 @@ def run_discord_bot():
                 await interaction.response.send_message(f"Not a cb day")
         except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDaysError, ObjectDoesntExistsInDBError,
                 ValueError) as e:
-            return await interaction.response.send_message(e)
+            embed = discord.Embed(title=f"Error", color=0x3083e3,
+                                  description=e)
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @client.tree.command(name="getoverflows", description="Gets all available overflows in clan")
     @app_commands.describe(player_name='Name of your account')
@@ -531,7 +502,9 @@ def run_discord_bot():
                 await interaction.response.send_message(f"Today is not cb day")
         except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDaysError, ObjectDoesntExistsInDBError,
                 NoActiveCBError, ValueError) as e:
-            return await interaction.response.send_message(e)
+            embed = discord.Embed(title=f"Error", color=0x3083e3,
+                                  description=e)
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @client.tree.command(name="bossavailability", description="Gets all available booking for boss in lap")
     @app_commands.describe(lap="Desired lap", boss_num='Boss number', player_name='Name of the player')
@@ -573,7 +546,9 @@ def run_discord_bot():
                 await interaction.response.send_message(f"Today is not cb day")
         except (ParameterIsNullError, ClanBattleCantHaveMoreThenFiveDaysError, ObjectDoesntExistsInDBError,
                 NoActiveCBError, ValueError) as e:
-            return await interaction.response.send_message(e)
+            embed = discord.Embed(title=f"Error", color=0x3083e3,
+                                  description=e)
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @client.tree.command(name="bookboss", description="Creates booking for desired boss")
     @app_commands.describe(comp_name='Name of team composition', lap="Desired lap",
@@ -598,7 +573,9 @@ def run_discord_bot():
             await book_boss_help(service, interaction, ovf_time, lap, boss_num, comp_name, player_name)
 
         except ObjectDoesntExistsInDBError as e:
-            return await interaction.response.send_message(e)
+            embed = discord.Embed(title=f"Error", color=0x3083e3,
+                                  description=e)
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @client.tree.command(name="recordreset", description="Set reset as used")
     @app_commands.describe(player_name='Name of your account')
@@ -620,7 +597,9 @@ def run_discord_bot():
                 await interaction.response.send_message(f"Today is not cb day")
         except (ObjectDoesntExistsInDBError, ParameterIsNullError, NoActiveCBError, ObjectDoesntExistsInDBError,
                 ValueError) as e:
-            return await interaction.response.send_message(e)
+            embed = discord.Embed(title=f"Error", color=0x3083e3,
+                                  description=e)
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @client.tree.command(name="gethitters", description="Get players that still have hits left")
     @app_commands.describe(cb_day='Day of cb, leave empty for today', player_name='Name of the player')
@@ -649,7 +628,9 @@ def run_discord_bot():
             else:
                 await interaction.response.send_message('Not a cb day')
         except (ObjectDoesntExistsInDBError, ValueError, NoActiveCBError) as e:
-            return await interaction.response.send_message(e)
+            embed = discord.Embed(title=f"Error", color=0x3083e3,
+                                  description=e)
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
     # @app_commands.command(name="deleteplayer", description="Delete a player")
