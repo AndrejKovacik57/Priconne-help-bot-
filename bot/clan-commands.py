@@ -321,7 +321,7 @@ class ClanGroup(app_commands.Group):
                     if user_role.id == role[2]:
                         clans = await self.service.get_clans(guild_id)
                         for i in range(len(clans)):
-                            await self.service.delete_clan_battle_by_name_and_clan_id(cb_name, clans[i][0])
+                            await self.service.delete_clan_battle_by_name_and_clan_id(cb_name, clans[i].clan_id)
                             return await interaction.response.send_message(
                                 f'You have deleted cb: {cb_name} and all related information '
                                 f'for clans in your server')
