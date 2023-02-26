@@ -344,10 +344,10 @@ class ClanGroup(app_commands.Group):
                     if user_role.id == role[2]:
                         clans = await self.service.get_clans(guild_id)
                         for i in range(len(clans)):
-                            await self.service.delete_clan_battle_by_name_and_clan_id(cb_name, clans[i][0])
-                            embed = discord.Embed(title="Delete CB Success!", color=0x3083e3,
-                                description=f"You have deleted cb: {cb_name} and all related information for clans in your server")
-                            return await interaction.response.send_message(embed=embed, ephemeral=False)
+                            await self.service.delete_clan_battle_by_name_and_clan_id(cb_name, clans[i].clan_id)
+                            return await interaction.response.send_message(
+                                f'You have deleted cb: {cb_name} and all related information '
+                                f'for clans in your server')
 
             embed = discord.Embed(title="Error", color=0x3083e3,
                                 description=f"You don't have permission to use this command!")

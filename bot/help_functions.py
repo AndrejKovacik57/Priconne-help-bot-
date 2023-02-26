@@ -189,7 +189,7 @@ async def scrape_clan_rankings(name):
         ranking = ' '.join(th.text.split())
         if clan_name_found == clan_name:
             return ranking
-    return 'Clan is not top 100'
+    return 'Clan is not top 150'
 
 
 def boss_char_by_lap(lap):

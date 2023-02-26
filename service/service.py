@@ -567,9 +567,6 @@ class Service:
         if not player_to_be_updated:
             raise ObjectDoesntExistsInDBError(f'player id {player.player_id}')
 
-        if not (player.name and player.discord_id):
-            raise ParameterIsNullError("Player name and discord_id cant be empty")
-
         async with aiosqlite.connect(self.db) as conn:
             cur = await conn.cursor()
             if player_to_be_updated.name != player.name:
