@@ -542,6 +542,14 @@ def run_discord_bot():
             clan = clan_player[1]
             cb = await service.get_clan_battle_active_by_clan_id(clan.clan_id)
             day_of_cb = get_cb_day(cb)
+            if ((lap_int >= 1) and (lap_int <= 3)):
+                phase = 'A'
+            elif ((lap_int >= 4) and (lap_int <= 10)):
+                phase = 'B'
+            elif ((lap_int >= 11) and (lap_int <= 34)):
+                phase = 'C'
+            else:
+                phase = 'D'
 
             if day_of_cb:
                 boss = await service.get_active_boss_by_cb_id(cb.cb_id)
@@ -560,11 +568,11 @@ def run_discord_bot():
 
                     message_string += f'**{player.name}** - {booking.comp_name}, {has_ovf}\n'
                 if not message_string:
-                    embed=discord.Embed(title=f"L{lap}B{boss_num}", color=0xffff00,
+                    embed=discord.Embed(title=f"L{lap}{phase}{boss_num}", color=0xffff00,
                                         description="No existing bookings")
                     return await interaction.response.send_message(embed=embed, ephemeral=False)
                     # message_string = f'For lap: {lap} and boss: {boss_num} doesnt exists any booking'
-                embed=discord.Embed(title=f"L{lap}B{boss_num}", color=0xffff00,
+                embed=discord.Embed(title=f"L{lap}{phase}{boss_num}", color=0xffff00,
                                         description=f"{message_string}")
                 return await interaction.response.send_message(embed=embed, ephemeral=False)
             else:
