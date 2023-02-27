@@ -688,9 +688,11 @@ def run_discord_bot():
                 hitters = await service.get_pcdi_by_cb_id_and_hits(cb.cb_id, cb_day)
                 hitter_names = ''
                 hitter_hits = ''
+                total_hits = 0
                 for hitter in hitters:
                     hitter_names += f"{hitter[0]}\n"
                     hitter_hits += f"{hitter[1]}\n"
+                    total_hits += hitter[1]
 
                 if len(hitters) == 0:
                     embed = discord.Embed(title="All Done!", color=0xffff00,
@@ -699,6 +701,7 @@ def run_discord_bot():
                 embed = discord.Embed(title=f"Day {cb_day}", color=0xffff00)
                 embed.add_field(name="Name", value=hitter_names, inline=True)
                 embed.add_field(name="Hits", value=hitter_hits, inline=True)
+                embed.add_field(name="Total Hits", value=total_hits, inline=False)
                 return await interaction.response.send_message(embed=embed, ephemeral=False)
             else:
                 embed = discord.Embed(title=f"No CB", color=0xffff00,
